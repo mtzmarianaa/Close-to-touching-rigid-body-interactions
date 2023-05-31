@@ -1,0 +1,12 @@
+GPATH
+GRTAGS
+GTAGS
+*~
+*.pyc
+*.o
+*.bin
+*.txt
+*.json
+*.icloud
+*.pyc
+*.DS_Store
