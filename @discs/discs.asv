@@ -34,19 +34,20 @@ classdef discs
             end
 
             ctrs = geom.ctrs;
+            nDiscs = size(ctrs, 2);
             obj.nDiscs = nDiscs;
             Rs = ones(1, nDiscs);
             nBreakPoints = 10*ones(1, nDiscs);
 
-            if( isfield(geom, 'Rs')
+            if isfield(geom, 'Rs')
                 Rs = geom.Rs;
             end
-            if isfield()
+            if isfield(geom, 'nBreakPoints')
+                if( size(geom.nBreakPoints, 2) < nDiscs)
+                    nBreakPoints = geom.nBreakPoints(1)
+                nBreakPoints = geom.nBreakPoints;
+            end
 
-            ctrs = geom.ctrs;
-            Rs = geom.Rs;
-            nBreakPoints = geom.nBreakPoints;
-            nDiscs = size(ctrs, 2);
             obj.ctrs = ctrs;
             obj.Rs = Rs;
             obj.nBreakPoints = nBreakPoints;

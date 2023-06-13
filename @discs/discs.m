@@ -43,7 +43,11 @@ classdef discs
                 Rs = geom.Rs;
             end
             if isfield(geom, 'nBreakPoints')
-                nBreakPoints = geom.nBreakPoints;
+                if( size(geom.nBreakPoints, 2) < nDiscs)
+                    nBreakPoints = geom.nBreakPoints(1)*ones(1, nDiscs);
+                else
+                    nBreakPoints = geom.nBreakPoints;
+                end
             end
 
             obj.ctrs = ctrs;
@@ -55,7 +59,7 @@ classdef discs
                 breakpoints = linspace(0, 2*pi, nBreakPoints(i));
                 center = ctrs(:, i);
                 R = Rs(i);
-                listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), breakpoints );
+                listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), breakpoints, [], p );
             end
             chnkrs = merge(listChnkrs);
             obj.listChnkrs = listChnkrs;
