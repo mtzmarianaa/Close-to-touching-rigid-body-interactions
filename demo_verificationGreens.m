@@ -44,7 +44,6 @@ nOnSurface = reshape(ds.chnkrs.n, 2 , ds.chnkrs.k*ds.chnkrs.nch);
 tRand = 2*pi.*rand(1, 100);
 normRand = 1.25 + (3)*rand(2, 100);
 xOffSurface = normRand.*[sin(tRand); cos(tRand)];
-xOnSurfaceTest = [sin(tRand); cos(tRand)];
 
 
 % plot
@@ -65,7 +64,7 @@ SL_kern = @(s,t) chnk.lap2d.kern(s, t, 's');
 DL_kern = @(s,t) chnk.lap2d.kern(s, t, 'd');
 
 
-% Define u
+% Define u, gradSL, pupn
 u = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
 gradSL = @(r) (-1)*r./(2*pi*vecnorm(r).*vecnorm(r));
 pupn = @(n, x) dot(n, gradSL( bsxfun(@minus, x, x0) ));
@@ -85,11 +84,11 @@ title('partial u partial n on surface')
 DL_offSurface = chunkerkerneval(ds.chnkrs, DL_kern, u(xOnSurface), xOffSurface);
 SL_offSurface = chunkerkerneval(ds.chnkrs, SL_kern, pupn(nOnSurface, xOnSurface), xOffSurface);
 u_offSurface = u(xOffSurface);
-DL_onSurface = chunkerkerneval(ds.chnkrs, DL_kern, u(xOnSurface), xOnSurfaceTest);
-SL_onSurface = chunkerkerneval(ds.chnkrs, SL_kern, pupn(nOnSurface, xOnSurface), xOnSurfaceTest);
+DLmat_onSurface = chunkermat(ds.chnkrs, DL_kern, []);
+SLmat_onSurface = chunkermat(ds.chnkrs, SL_kern, []);
+Imat = eye(size(DLmat_onSurface));
 fprintf("%5.5e  : max u off surface: \n", max(abs(u_offSurface)))
 u_onSurface = u(xOnSurface);
-u_onSurfaceTest = u(xOnSurfaceTest);
 fprintf("%5.5e  : max u on surface: \n", max(abs(u_onSurface)))
 pupn_onSurface = pupn(nOnSurface, xOnSurface);
 fprintf("%5.5e  : max pupn on surface: \n", max(abs(pupn_onSurface)))
@@ -104,15 +103,26 @@ plot(1:100, u_offSurface, 'Color', cS, 'Marker', '*')
 
 
 err_OffSurface = DL_offSurface - SL_offSurface - u_offSurface';
-err_OnSurface = (DL_onSurface + 0.5*u_onSurfaceTest') - SL_onSurface - u_onSurfaceTest';
+err_OnSurface = (0.5*Imat + DLmat_onSurface)*(u_onSurface') - SLmat_onSurface*(pupn_onSurface') - u_onSurface';
 
 figure(7)
 plot(1:length(err_OffSurface), err_OffSurface, 'Color', cS);
 title("Errors off surface")
 fprintf("%5.5e  : max err off surface: \n", max(abs(err_OffSurface)))
+fprintf("%5.5e  : norm err off surface: \n", norm(err_OffSurface) )
 
 figure(8)
 plot(1:length(err_OnSurface), err_OnSurface, 'Color', cO);
 title("Errors on surface")
 fprintf("%5.5e  : max err on surface: \n", max(abs(err_OnSurface)))
+fprintf("%5.5e  : norm err on surface: \n", norm(err_OnSurface) )
+
+
+
+
+
+
+
+
+
 
