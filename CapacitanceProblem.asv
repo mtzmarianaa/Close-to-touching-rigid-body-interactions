@@ -147,25 +147,18 @@ end
 figure(5)
 for i=1:n
     [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_B(i) , Rs(i) , Rs(i) , 0 );
-    s = surf(X,Y,Z,'FaceAlpha',0.5);
-    s.EdgeColor = 'none';
+    surf(X, Y, Z, cS)
     hold on
 end
-colorbar
-title("Total charge on each disc, Matlab's backslash")
 hold off
 
+
+allXonSurface = reshape(ds.chnkrs.r, 2, ds.chnkrs.k*ds.chnkrs.nch);
+scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_B, [], cS)
+title("sigma on surface, Matlab's backslash")
 
 
 % Plot the charges qk
 figure(6)
-for i=1:n
-    [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_G(i) , Rs(i) , Rs(i) , 0 );
-    s = surf(X,Y,Z,'FaceAlpha',0.5);
-    s.EdgeColor = 'none';
-    hold on
-end
-colorbar
-title("Total charge on each disc, GMRES")
-hold off
-
+scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_G, [], cS)
+title("sigma on surface, GMRES")
