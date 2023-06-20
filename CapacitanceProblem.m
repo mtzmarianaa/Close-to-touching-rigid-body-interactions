@@ -1,16 +1,19 @@
-% Capacitance problem (one disc first)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Capacitance problem (2 discs first)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear all
 close all
 
-u1 = @(x) ones(size(x, 2), 1);
-u2 = @(x) 0.5*ones(size(x, 2), 1);
+% For a point charge
+x0 = 1/(2*sqrt(2))*[1; 1];
+
+u1 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
+u2 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
 
 
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
-ctrs = [0 2;0 2]; % Centers of the circles
-Rs = [0.5; 0.5]; % Radi of the circles
+ctrs = [0 3;0 0]; % Centers of the circles
+Rs = [1.0; 1.0]; % Radi of the circles
 n = length(uk);
 nBreakPoints = [10; 10];
 
@@ -46,6 +49,7 @@ for i =1:n
 end
 title("uk on surface")
 hold off
+
 
 % BUILD THE KERNEL FUNCTIONS
 SL_kern = @(s,t) chnk.lap2d.kern(s, t, 's');

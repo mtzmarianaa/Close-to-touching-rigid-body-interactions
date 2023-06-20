@@ -33,7 +33,7 @@ axis equal
 %%%%% Place a point source f0 at x0 inside the disc, off-center but not too
 % close to the boundary
 
-x0 = 1/(2*sqrt(2))*[1; 1];
+x0 = 1/(2*sqrt(2))*[-1; -1];
 
 %%%%% Evaluate u(x) = SL(x-x0) and DL(x - x0) at discretization points x
 
@@ -44,10 +44,8 @@ nOnSurface = reshape(ds.chnkrs.n, 2 , ds.chnkrs.k*ds.chnkrs.nch);
 tRand = 2*pi.*rand(1, 100);
 normRand = 1.25 + (3)*rand(1, 100);
 normRand0 = 1.1 + 0.5*rand(1, 100);
-iseed = 257;
-tRand0 = 2*pi.*rand(1, 100);
-xOffSurface = [normRand0.*sin(tRand) normRand0.*sin(tRand0) + 3; normRand.*cos(tRand) normRand.*cos(tRand0)];
-nOffSurface = size(xOffSurface, 2);
+xOffSurface = [normRand0.*sin(tRand) normRand0.*sin(tRand); normRand.*cos(tRand)];
+
 
 % plot
 
@@ -76,15 +74,12 @@ pupn = @(n, x) dot(n, gradSL( bsxfun(@minus, x, x0) ));
 figure(4)
 scatter3(xOnSurface(1, :), xOnSurface(2, :), u(xOnSurface), 'Color', cq);
 title('u on surface')
-xlim([-2, 5])
-ylim([-2, 5])
 
 % Plot pupn
 figure(5)
 scatter3(xOnSurface(1, :), xOnSurface(2, :), pupn(nOnSurface, xOnSurface), 'Color', cO);
 title('partial u partial n on surface')
-xlim([-2, 5])
-ylim([-2, 5])
+
 
 % Use chunkerkerneval
 DL_offSurface = chunkerkerneval(ds.chnkrs, DL_kern, u(xOnSurface), xOffSurface);
@@ -102,17 +97,17 @@ fprintf("%5.5e  : max pupn on surface: \n", max(abs(pupn_onSurface)))
 
 % Plot DL, SL, u
 figure(6)
-plot(1:nOffSurface, DL_offSurface, 'Color', cq, 'Marker', 'o')
+plot(1:100, DL_offSurface, 'Color', cq, 'Marker', 'o')
 hold on
-plot(1:nOffSurface, SL_offSurface, 'Color', cO, 'Marker', 'square')
-plot(1:nOffSurface, u_offSurface, 'Color', cS, 'Marker', '*')
+plot(1:100, SL_offSurface, 'Color', cO, 'Marker', 'square')
+plot(1:100, u_offSurface, 'Color', cS, 'Marker', '*')
 
 
 err_OffSurface = DL_offSurface - SL_offSurface - u_offSurface';
 err_OnSurface = (0.5*Imat + DLmat_onSurface)*(u_onSurface') - SLmat_onSurface*(pupn_onSurface') - u_onSurface';
 
 figure(7)
-plot(1:nOffSurface, err_OffSurface, 'Color', cS);
+plot(1:length(err_OffSurface), err_OffSurface, 'Color', cS);
 title("Errors off surface")
 fprintf("%5.5e  : max err off surface: \n", max(abs(err_OffSurface)))
 fprintf("%5.5e  : norm err off surface: \n", norm(err_OffSurface) )
