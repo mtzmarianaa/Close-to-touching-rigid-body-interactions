@@ -6,9 +6,6 @@ clear all
 close all
 
 
-iseed = 166297;
-rng(iseed,'twister');
-
 
 fprintf("------n VERIFICATION OF GREEN'S IDENTITY ONE DISC-----\n\n\n ")
 
@@ -41,10 +38,11 @@ xOnSurface = reshape(ds.chnkrs.r, 2 , ds.chnkrs.k*ds.chnkrs.nch); % discretizati
 nOnSurface = reshape(ds.chnkrs.n, 2 , ds.chnkrs.k*ds.chnkrs.nch);
 
 % Generate off surface points randomly
+rng(166297);
 tRand = 2*pi.*rand(1, 100);
 normRand = 1.25 + (3)*rand(1, 100);
 normRand0 = 1.1 + 0.5*rand(1, 100);
-iseed = 257;
+rng(257);
 tRand0 = 2*pi.*rand(1, 100);
 xOffSurface = [normRand0.*sin(tRand) normRand0.*sin(tRand0) + 3; normRand.*cos(tRand) normRand.*cos(tRand0)];
 nOffSurface = size(xOffSurface, 2);

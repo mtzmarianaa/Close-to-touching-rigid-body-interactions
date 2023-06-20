@@ -5,18 +5,18 @@ clear all
 close all
 
 % Define the charges on each disc
-q1 = 8.31059e-01;
-q2 = -1.88353e-01;
+q1 = 2.5;
+%q2 = 50;
 
-qs = [q1; q2];
+qs = [q1];
 
 
 % Define the geometry of the circles
 
-ctrs = [0 3;0 0]; % Centers of the circles
-Rs = [1.0; 1.0]; % Radi of the circles
+ctrs = [0;0]; % Centers of the circles
+Rs = [1.0]; % Radi of the circles
 n = length(qs);
-nBreakPoints = [10; 10];
+nBreakPoints = [10];
 
 
 % Define points on surface
@@ -111,7 +111,9 @@ for k=1:n
 end
 
 % Complete building the rhs and the sparse matrix M
-rhs = -rhsMat*nu;
+rhs_chunkermat = chunkermat(ds.chnkrs, SL_kern)*nu;
+rhs = -rhs_chunkermat*nu;
+%rhs = -rhsMat*nu;
 %rhs_chunkermat = chunkermat(ds.chnkrs, SL_kern)*nu;
 %difMat = rhsMat - chunkermat(ds.chnkrs, SL_kern);
 %spy(difMat)
@@ -124,31 +126,52 @@ K = IDplusDLMat + M;
 s = tic();
 sigma = K\rhs;
 t = toc(s);
-fprintf("%5.2e s :time taken to solve the linear system with Matlab's backslash\n", t1);
+fprintf("%5.2e s :time taken to solve the linear system with Matlab's backslash\n", t);
 
 
 % Compute u for on surface points
 
-u_onSurfaceElastance = M*sigma;
+u_onSurfaceElastance = -M*sigma;
 
-% Generate off surface points randomly
-iseed = 166297;
-tRand = 2*pi.*rand(1, 100);
-normRand = 1.25 + (3)*rand(1, 100);
-normRand0 = 1.1 + 0.5*rand(1, 100);
-iseed = 257;
-tRand0 = 2*pi.*rand(1, 100);
-xOffSurface = [normRand0.*sin(tRand) normRand0.*sin(tRand0) + 3; normRand.*cos(tRand) normRand.*cos(tRand0)];
-
-% Compute u off surface
-u_offSurfaceElastance = chunkerkerneval(ds.chnkrs, DLplusSL, sigma, xOffSurface, opts);
-
-% Plot u on surface and u off surface
+% Plot u on surface
 figure(3)
 scatter3(xOnSurface(1, :), xOnSurface(2, :), u_onSurfaceElastance, 'Color', cq);
-hold on
-scatter3(xOffSurface(1, :), xOffSurface(2, :), u_offSurfaceElastance, 'Color', cS);
-title('u on and off surface')
+title('u on surface')
 xlim([-2, 5])
 ylim([-2, 5])
+
+
+% Plot u off surface
+
+
+%%%%% Plot u off surface
+% Find points off surface
+rmin = min(ds.chnkrs ) - [1;1]; 
+rmax = max(ds.chnkrs ) + [1;1];
+nplot = 200;
+hx = (rmax(1)-rmin(1))/nplot;
+hy = (rmax(2)-rmin(2))/nplot;
+xtarg = linspace(rmin(1)+hx/2,rmax(1)-hx/2,nplot); 
+ytarg = linspace(rmin(2)+hy/2,rmax(2)-hy/2,nplot);
+[xxtarg,yytarg] = meshgrid(xtarg,ytarg);
+targets = zeros(2,length(xxtarg(:)));
+targets(1,:) = xxtarg(:); targets(2,:) = yytarg(:);
+
+s = tic; 
+in = chunkerinterior(ds.chnkrs , targets ); 
+t3 = toc(s);
+fprintf('%5.2e s : time to find points off surface\n',t3)
+
+% Evaluate points off surface
+s = tic;
+Dsol = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma , targets(:,~in)); 
+t4 = toc(s);
+fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t4);
+
+% Plot off surface
+figure(7)
+zztarg = nan(size(xxtarg));
+zztarg(~in) = Dsol;
+h=surf(xxtarg,yytarg,zztarg);
+set(h,'EdgeColor','none')
 

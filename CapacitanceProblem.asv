@@ -1,16 +1,19 @@
-% Capacitance problem (one disc first)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Capacitance problem (2 discs first)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear all
 close all
 
-u1 = @(x) ones(size(x, 2), 1);
-u2 = @(x) 0.5*ones(size(x, 2), 1);
+% For a point charge
+x0 = 1/(2*sqrt(2))*[1; 1];
+
+u1 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
+u2 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
 
 
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
-ctrs = [0 2;0 2]; % Centers of the circles
-Rs = [0.5; 0.5]; % Radi of the circles
+ctrs = [0 3;0 0]; % Centers of the circles
+Rs = [1.0; 1.0]; % Radi of the circles
 n = length(uk);
 nBreakPoints = [10; 10];
 
@@ -46,6 +49,7 @@ for i =1:n
 end
 title("uk on surface")
 hold off
+
 
 % BUILD THE KERNEL FUNCTIONS
 SL_kern = @(s,t) chnk.lap2d.kern(s, t, 's');
@@ -147,18 +151,50 @@ end
 figure(5)
 for i=1:n
     [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_B(i) , Rs(i) , Rs(i) , 0 );
-    surf(X, Y, Z, cS)
+    s = surf(X,Y,Z,'FaceAlpha',0.5);
+    s.EdgeColor = 'none';
     hold on
 end
+colorbar
+title("Total charge on each disc, Matlab's backslash")
 hold off
 
-
-allXonSurface = reshape(ds.chnkrs.r, 2, ds.chnkrs.k*ds.chnkrs.nch);
-scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_B, [], cS)
-title("sigma on surface, Matlab's backslash")
 
 
 % Plot the charges qk
 figure(6)
-scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_G, [], cS)
-title("sigma on surface, GMRES")
+for i=1:n
+    [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_G(i) , Rs(i) , Rs(i) , 0 );
+    s = surf(X,Y,Z,'FaceAlpha',0.5);
+    s.EdgeColor = 'none';
+    hold on
+end
+colorbar
+title("Total charge on each disc, GMRES")
+hold off
+
+
+
+%%%%% Plot u off surface
+% Find points off surface
+rmin = min(chnkr); rmax = max(chnkr);
+nplot = 200;
+hx = (rmax(1)-rmin(1))/nplot;
+hy = (rmax(2)-rmin(2))/nplot;
+xtarg = linspace(rmin(1)+hx/2,rmax(1)-hx/2,nplot); 
+ytarg = linspace(rmin(2)+hy/2,rmax(2)-hy/2,nplot);
+[xxtarg,yytarg] = meshgrid(xtarg,ytarg);
+targets = zeros(2,length(xxtarg(:)));
+targets(1,:) = xxtarg(:); targets(2,:) = yytarg(:);
+
+s = tic; 
+in = chunkerinterior(ds.chnkrs , targets ); 
+t3 = toc(s);
+fprintf('%5.2e s : time to find points off surface\n',t3)
+
+% Evaluate points off surface
+s = tic;
+Dsol = chunkerkerneval(ds.chnkrs , fkern, sol , targets(:,in)); 
+t4 = toc(s);
+fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t1);
+
