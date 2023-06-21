@@ -11,9 +11,12 @@ u1 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
 u2 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
 
 
+u1 = @(x) 0*x(1, :);
+u2 = @(x) 1+0*x(1, :);
+
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
-ctrs = [0 3;0 0]; % Centers of the circles
-Rs = [1.0; 1.0]; % Radi of the circles
+ctrs = [0 5 ;0 0]; % Centers of the circles
+Rs = [1.5; 1.25]; % Radi of the circles
 n = length(uk);
 nBreakPoints = [10; 10];
 
@@ -24,8 +27,8 @@ geom.ctrs = ctrs;
 geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 ds = discs(geom);
-nk = (nBreakPoints - 1).*16; % Number of discretization points on each disk
-nk = [0; nk]; % Useful for filling in the matrix K
+nk = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
+nk = [0 nk]; % Useful for filling in the matrix K
 Ntot = sum(nk);
 
 % Plot the circles
@@ -83,9 +86,12 @@ for k=1:n
             submat = chunkerkernevalmat(chnkri, DLplusSL, targ, opts);
         end
         % Add this submatrix to K
-        K(start_row:end_row, start_col:end_col) = submat;
+        K(start_col:end_col, start_row:end_row) = submat;
     end
 end
+
+K2 = chunkermat(ds.chnkrs, DLplusSL, opts);
+K2 = K2 + 0.5*speye(size(K));
 
 % Fill the RHS
 
@@ -177,8 +183,9 @@ hold off
 
 %%%%% Plot u off surface
 % Find points off surface
-rmin = min(chnkr); rmax = max(chnkr);
-nplot = 200;
+rmin = min(ds.chnkrs ) - 5*[1;1]; 
+rmax = max(ds.chnkrs ) + 5*[1;1];
+nplot = 250;
 hx = (rmax(1)-rmin(1))/nplot;
 hy = (rmax(2)-rmin(2))/nplot;
 xtarg = linspace(rmin(1)+hx/2,rmax(1)-hx/2,nplot); 
@@ -194,7 +201,15 @@ fprintf('%5.2e s : time to find points off surface\n',t3)
 
 % Evaluate points off surface
 s = tic;
-Dsol = chunkerkerneval(ds.chnkrs , fkern, sol , targets(:,in)); 
+Dsol = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma_B , targets(:,~in)); 
 t4 = toc(s);
-fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t1);
+fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t4);
 
+% Plot off surface
+figure(7)
+zztarg = nan(size(xxtarg));
+zztarg(~in) = Dsol;
+h=surf(xxtarg,yytarg,zztarg);
+set(h,'EdgeColor','none')
+title("Potential in the exterior, Capacitance")
+colorbar

@@ -3,17 +3,20 @@
 
 clear all
 close all
-
+format long
 % For a point charge
 x0 = 1/(2*sqrt(2))*[1; 1];
 
-u1 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
-u2 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
+%u1 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
+%u2 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
 
+
+u1 = @(x) 0*x(1, :);
+u2 = @(x) 1+0*x(1, :);
 
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
-ctrs = [0 3;0 0]; % Centers of the circles
-Rs = [1.0; 1.0]; % Radi of the circles
+ctrs = [0 5 ;0 0]; % Centers of the circles
+Rs = [1.5; 1.25]; % Radi of the circles
 n = length(uk);
 nBreakPoints = [10; 10];
 
@@ -25,11 +28,11 @@ geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 ds = discs(geom);
 nk = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
-nk = [0; nk]; % Useful for filling in the matrix K
+nk = [0 nk]; % Useful for filling in the matrix K
 Ntot = sum(nk);
 
 % Plot the circles
-figure(1)
+figure()
 cq = [0 232/255 255/255];
 cO = [147/255 155/255 255/255];
 cS = [155/255 0 255/255];
@@ -37,9 +40,10 @@ plot(ds.chnkrs, '-o', 'Color', cq)
 hold on
 quiver(ds.chnkrs, 'Color', cO)
 axis equal
+title("Capacitance Problem - Circles and Normals")
 
 % Plot the uks on surface
-figure(2)
+figure()
 for i =1:n
     chnkri = ds.listChnkrs(i); 
     xOnSurface = reshape(chnkri.r, 2, chnkri.k*chnkri.nch);
@@ -47,7 +51,7 @@ for i =1:n
     scatter3(xOnSurface(1, :), xOnSurface(2, :), u_toUse, [], cO)
     hold on
 end
-title("uk on surface")
+title("Capacitance Problem - uk on surface")
 hold off
 
 
@@ -83,9 +87,12 @@ for k=1:n
             submat = chunkerkernevalmat(chnkri, DLplusSL, targ, opts);
         end
         % Add this submatrix to K
-        K(start_row:end_row, start_col:end_col) = submat;
+        K(start_col:end_col, start_row:end_row) = submat;
     end
 end
+
+K2 = chunkermat(ds.chnkrs, DLplusSL, opts);
+K2 = K2 + 0.5*speye(size(K));
 
 % Fill the RHS
 
@@ -115,16 +122,16 @@ fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t2);
 
 
 % Plot the sigma_ks on surface
-figure(3)
+figure()
 allXonSurface = reshape(ds.chnkrs.r, 2, ds.chnkrs.k*ds.chnkrs.nch);
 scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_B, [], cq)
-title("sigma on surface, Matlab's backslash")
+title("Capacitance Problem - sigma on surface, Matlab's backslash")
 
 
 % Plot the sigma_ks on surface
-figure(4)
+figure()
 scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_G, [], cq)
-title("sigma on surface, GMRES")
+title("Capacitance Problem - sigma on surface, GMRES")
 
 
 
@@ -148,7 +155,7 @@ end
 
 
 % Plot the charges qk
-figure(5)
+figure()
 for i=1:n
     [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_B(i) , Rs(i) , Rs(i) , 0 );
     s = surf(X,Y,Z,'FaceAlpha',0.5);
@@ -156,13 +163,13 @@ for i=1:n
     hold on
 end
 colorbar
-title("Total charge on each disc, Matlab's backslash")
+title("Capacitance Problem - Total charge on each disc, Matlab's backslash")
 hold off
 
 
 
 % Plot the charges qk
-figure(6)
+figure()
 for i=1:n
     [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_G(i) , Rs(i) , Rs(i) , 0 );
     s = surf(X,Y,Z,'FaceAlpha',0.5);
@@ -170,16 +177,16 @@ for i=1:n
     hold on
 end
 colorbar
-title("Total charge on each disc, GMRES")
+title("Capacitance Problem - Total charge on each disc, GMRES")
 hold off
 
 
 
 %%%%% Plot u off surface
 % Find points off surface
-rmin = min(ds.chnkrs ) - [1;1]; 
-rmax = max(ds.chnkrs ) + [1;1];
-nplot = 200;
+rmin = min(ds.chnkrs ) - 5*[1;1]; 
+rmax = max(ds.chnkrs ) + 5*[1;1];
+nplot = 250;
 hx = (rmax(1)-rmin(1))/nplot;
 hy = (rmax(2)-rmin(2))/nplot;
 xtarg = linspace(rmin(1)+hx/2,rmax(1)-hx/2,nplot); 
@@ -195,15 +202,15 @@ fprintf('%5.2e s : time to find points off surface\n',t3)
 
 % Evaluate points off surface
 s = tic;
-Dsol = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma_B , targets(:,~in)); 
+Dsol_capacitance = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma_B , targets(:,~in)); 
 t4 = toc(s);
 fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t4);
 
 % Plot off surface
 figure(7)
 zztarg = nan(size(xxtarg));
-zztarg(~in) = Dsol;
+zztarg(~in) = Dsol_capacitance;
 h=surf(xxtarg,yytarg,zztarg);
 set(h,'EdgeColor','none')
-title("Potential in the exterior, Capacitance")
+title("Capacitance Problem - Potential in the exterior, Capacitance")
 colorbar

@@ -99,9 +99,9 @@ fprintf("%5.2e s :time taken to solve the linear system with Matlab's backslash 
 
 %%%%% Plot u off surface
 % Find points off surface
-rmin = min(ds.chnkrs ) - [1;1]; 
-rmax = max(ds.chnkrs ) + [1;1];
-nplot = 200;
+rmin = min(ds.chnkrs ) - 5*[1;1]; 
+rmax = max(ds.chnkrs ) + 5*[1;1];
+nplot = 250;
 hx = (rmax(1)-rmin(1))/nplot;
 hy = (rmax(2)-rmin(2))/nplot;
 xtarg = linspace(rmin(1)+hx/2,rmax(1)-hx/2,nplot); 

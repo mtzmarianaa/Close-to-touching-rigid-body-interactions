@@ -10,8 +10,8 @@ close all
 fprintf("------n VERIFICATION OF GREEN'S IDENTITY ONE DISC-----\n\n\n ")
 
 geom = [];
-geom.ctrs = [0  3; 0 0];
-geom.Rs = [1.0 1.0];
+geom.ctrs = [0  ; 0 ];
+geom.Rs = [2.0 ];
 geom.nBreakPoints = 10;
 
 
@@ -30,7 +30,9 @@ axis equal
 %%%%% Place a point source f0 at x0 inside the disc, off-center but not too
 % close to the boundary
 
-x0 = 1/(2*sqrt(2))*[1; 1];
+%x0 = 1/(2*sqrt(2))*[1; 1];
+
+x0 = [0;0];
 
 %%%%% Evaluate u(x) = SL(x-x0) and DL(x - x0) at discretization points x
 
@@ -108,6 +110,9 @@ plot(1:nOffSurface, u_offSurface, 'Color', cS, 'Marker', '*')
 
 err_OffSurface = DL_offSurface - SL_offSurface - u_offSurface';
 err_OnSurface = (0.5*Imat + DLmat_onSurface)*(u_onSurface') - SLmat_onSurface*(pupn_onSurface') - u_onSurface';
+fprintf("%5.5e : max first term\n", max(abs((0.5*Imat + DLmat_onSurface)*(u_onSurface') )) )
+fprintf("%5.5e : max second term\n", max(abs( SLmat_onSurface*(pupn_onSurface') )) )
+fprintf("%5.5e : max third term\n", max(abs( u_onSurface' )) )
 
 figure(7)
 plot(1:nOffSurface, err_OffSurface, 'Color', cS);
