@@ -1,12 +1,12 @@
 % Elastance problem (2 discs first)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%clear all
-%close all
+clear all
+close all
 
 % Define the charges on each disc
-q1 = -4.1628;
-q2 = 1.2220;
+q1 = -4.162781873389288733733337721787393093109130859375;
+q2 = 1.2219951298941718054180682884179987013339996337890625;
 
 qs = [q1; q2];
 
@@ -14,7 +14,7 @@ qs = [q1; q2];
 % Define the geometry of the circles
 
 ctrs = [0 5;0 0]; % Centers of the circles
-Rs = [1.5; 1.25]; % Radi of the circles
+Rs = [1.5; 1.5]; % Radi of the circles
 n = length(qs);
 nBreakPoints = [10; 10];
 
@@ -88,7 +88,7 @@ for k=1:n
     start_col = nk(k) + 1;
     end_col = nk(k) + nCol;
     W = weights(chnkrk);
-    Bin(start_col:end_col) = W(:); % Diagonal for the M matrix
+    Bin(start_col:end_col) = reshape(W, chnkrk.k*chnkrk.nch, 1); % Diagonal for the M matrix
     for i=1:n
         nRow = nk(i + 1); % Number of rows for the submatrix
         start_row = nk(i) + 1;
@@ -98,28 +98,25 @@ for k=1:n
         if(i == k)
             % on boundary
             submat = chunkermat(chnkri, DL_kern) + 0.5*eye(nRow);
-            submat_rhs = chunkermat(chnkri, SL_kern) ;
         else
             % off boundary
             submat = chunkerkernevalmat(chnkri, DL_kern, targ, opts);
-            submat_rhs = chunkerkernevalmat(chnkri, SL_kern, targ, opts);
         end
         % Add this submatrix to K
         IDplusDLMat(start_col:end_col, start_row:end_row) = submat;
-        rhsMat(start_col:end_col, start_row:end_row) = submat_rhs;
     end
 end
 
 % Complete building the rhs and the sparse matrix M
-%rhs_chunkermat = chunkermat(ds.chnkrs, SL_kern);
-%rhs = -rhs_chunkermat*nu;
-rhs = -rhsMat*nu;
-%rhs_chunkermat = chunkermat(ds.chnkrs, SL_kern)*nu;
-difMat = rhsMat - chunkerkernevalmat(ds.chnkrs, SL_kern, xOnSurface,  []);
-spy(difMat)
+rhs_chunkermat = chunkermat(ds.chnkrs, SL_kern,  []);
+rhs = -rhs_chunkermat*nu;
+
 M = spdiags(Bin, 0 , Ntot , Ntot );
 
+
 % Build the system
+IDplusDLMat = chunkermat(ds.chnkrs, DL_kern, opts);
+IDplusDLMat = IDplusDLMat + 0.5*speye(size(IDplusDLMat));
 K = IDplusDLMat + M;
 
 % Solve for sigma, unknown density
@@ -137,8 +134,8 @@ u_onSurfaceElastance = -M*sigma;
 figure()
 scatter3(xOnSurface(1, :), xOnSurface(2, :), u_onSurfaceElastance, 'Color', cq);
 title('Elastance Problem - u on surface')
-xlim([-2, 5])
-ylim([-2, 5])
+xlim([-2, 8])
+ylim([-2, 8])
 
 
 % Plot u off surface

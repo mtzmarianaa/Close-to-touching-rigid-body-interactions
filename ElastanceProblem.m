@@ -25,9 +25,13 @@ geom.ctrs = ctrs;
 geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 ds = discs(geom);
-nk = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
-nk = [0 nk]; % Useful for filling in the matrix K
-Ntot = sum(nk);
+Ntot = ds.chnkrs.npt;
+nB = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
+nB = [0 nB]; % Useful for filling in the matrix K
+nk = zeros(size(nB));
+for i=2:(n+1)
+    nk(i) = nk(i-1) + nB(i);
+end
 
 % Plot the circles
 figure()
@@ -57,6 +61,7 @@ hold off
 SL_kern = @(s,t) chnk.lap2d.kern(s, t, 's');
 DL_kern = @(s,t) chnk.lap2d.kern(s, t, 'd');
 DLplusSL = @(s,t) DL_kern(s,t) + SL_kern(s,t);
+ID_kern = @(s,t)  speye(size(t.r, 2)*size(t.r, 3), size(s.r, 2) *size(s.r, 3));
 
 % Define the points on surface
 xOnSurface = reshape(ds.chnkrs.r, 2, ds.chnkrs.k*ds.chnkrs.nch);
@@ -67,7 +72,7 @@ for k= 1:n
     chnkrk = ds.listChnkrs(k);
     nPointsk = chnkrk.npt;
     start_row = nk(k) + 1;
-    end_row = nk(k) + nk(k + 1);
+    end_row = nk(k + 1);
     f = ones(nPointsk, 1);
     % Get the perimeter of omegak
     per = chunkerintegral(chnkrk, f, []);
@@ -75,51 +80,54 @@ for k= 1:n
 end
 
 % Build the RHS matrix, the I/2 + DL matrix and the M matrix
-rhsMat = zeros(Ntot);
 IDplusDLMat = zeros(Ntot);
-Bin = zeros(Ntot, 1);
 opts = [];
 
 for k=1:n
     % Fill column by column
-    nCol = nk(k+1); % Number of columns for the submatrices
+    nCol = nk(k+1) - nk(k); % Number of columns for the submatrices
     chnkrk = ds.listChnkrs(k); % Current circle
     targ = reshape(chnkrk.r, 2 , chnkrk.k*chnkrk.nch);
     start_col = nk(k) + 1;
-    end_col = nk(k) + nCol;
-    W = weights(chnkrk);
-    Bin(start_col:end_col) = W(:); % Diagonal for the M matrix
+    end_col = nk(k+1);
     for i=1:n
-        nRow = nk(i + 1); % Number of rows for the submatrix
+        nRow = nk(i + 1) - nk(i); % Number of rows for the submatrix
         start_row = nk(i) + 1;
-        end_row = nk(i) + nRow;
+        end_row = nk(i+1) ;
         chnkri = ds.listChnkrs(i); % chunker we are working with
         % See if we have to do an off boundary or on boundary eval
         if(i == k)
             % on boundary
             submat = chunkermat(chnkri, DL_kern) + 0.5*eye(nRow);
-            submat_rhs = chunkermat(chnkri, SL_kern) ;
         else
             % off boundary
             submat = chunkerkernevalmat(chnkri, DL_kern, targ, opts);
-            submat_rhs = chunkerkernevalmat(chnkri, SL_kern, targ, opts);
         end
         % Add this submatrix to K
         IDplusDLMat(start_col:end_col, start_row:end_row) = submat;
-        rhsMat(start_col:end_col, start_row:end_row) = submat_rhs;
     end
 end
 
-% Complete building the rhs and the sparse matrix M
-rhs_chunkermat = chunkerkernevalmat(ds.chnkrs, SL_kern, xOnSurface,  []);
+% Build the block diagonal matrix M
+M = zeros(Ntot);
+for i=1:n
+    start_index = nk(i) + 1;
+    end_index = nk(i+1);
+    chnkri = ds.listChnkrs(i); 
+    w = weights(chnkri);
+    w = reshape(w, chnkri.npt, [])';
+    submat = repmat(w, chnkri.npt, 1); % Block matrix with all its rows being the weights
+    M(start_index:end_index, start_index:end_index) = submat;
+end
+
+% Complete building the rhs 
+rhs_chunkermat = chunkermat(ds.chnkrs, SL_kern,  []);
 rhs = -rhs_chunkermat*nu;
-%rhs = -rhsMat*nu;
-%rhs_chunkermat = chunkermat(ds.chnkrs, SL_kern)*nu;
-%difMat = rhsMat - chunkerkernevalmat(ds.chnkrs, SL_kern, xOnSurface,  []);
-%spy(difMat)
-M = spdiags(Bin, 0 , Ntot , Ntot );
+
 
 % Build the system
+%IDplusDLMat = chunkermat(ds.chnkrs, DL_kern, opts);
+%IDplusDLMat = IDplusDLMat + 0.5*speye(size(IDplusDLMat));
 K = IDplusDLMat + M;
 
 % Solve for sigma, unknown density
@@ -137,8 +145,8 @@ u_onSurfaceElastance = -M*sigma;
 figure()
 scatter3(xOnSurface(1, :), xOnSurface(2, :), u_onSurfaceElastance, 'Color', cq);
 title('Elastance Problem - u on surface')
-xlim([-2, 5])
-ylim([-2, 5])
+xlim([-2, 8])
+ylim([-2, 8])
 
 
 % Plot u off surface

@@ -27,9 +27,14 @@ geom.ctrs = ctrs;
 geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 ds = discs(geom);
-nk = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
-nk = [0 nk]; % Useful for filling in the matrix K
-Ntot = sum(nk);
+Ntot = ds.chnkrs.npt;
+nB = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
+nB = [0 nB]; % Useful for filling in the matrix K
+nk = zeros(size(nB));
+for i=2:(n+1)
+    nk(i) = nk(i-1) + nB(i);
+end
+
 
 % Plot the circles
 figure()
@@ -68,15 +73,15 @@ opts = [];
 % Proceed to fill in the matrix 
 for k=1:n
     % fill column by column
-    nCol = nk(k + 1); % Number of columns for the submatrices
+    nCol = nk(k + 1) - nk(k); % Number of columns for the submatrices
     chnkrk = ds.listChnkrs(k);
     targ = reshape(chnkrk.r, 2 , chnkrk.k*chnkrk.nch);
     start_col = nk(k) + 1;
-    end_col = nk(k) + nCol;
+    end_col = nk(k+1);
     for i=1:n
-        nRow = nk(i + 1); % Number of rows for the submatrix
+        nRow = nk(i + 1) - nk(i); % Number of rows for the submatrix
         start_row = nk(i) + 1;
-        end_row = nk(i) + nRow;
+        end_row = nk(i + 1);
         chnkri = ds.listChnkrs(i); % chunker we are working with
         % See if we have to do an off boundary or on boundary eval
         if(i == k)
@@ -100,7 +105,7 @@ rhs = zeros(Ntot, 1);
 
 for i = 1:n
     start_row = nk(i) + 1;
-    end_row = nk(i) + nk(i + 1);
+    end_row = nk(i + 1);
     chnkri = ds.listChnkrs(i); 
     xOnSurface = reshape(chnkri.r, 2, chnkri.k*chnkri.nch);
     u_toUse = uk{i}(xOnSurface);
@@ -143,7 +148,7 @@ opts.usesmooth = false;
 for i=1:n
     chnkri = ds.listChnkrs(i);
     start_row = nk(i) + 1;
-    end_row = nk(i) + nk(i + 1);
+    end_row = nk(i + 1);
     sigma_Bi = sigma_B(start_row:end_row);
     q_B(i) = chunkerintegral(chnkri, sigma_Bi, opts);
     fprintf("%5.5e : charge at disk %1.0e with backslash\n", q_B(i), i);
