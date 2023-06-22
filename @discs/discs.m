@@ -17,7 +17,7 @@ classdef discs
     end
 
     methods
-        function obj = discs(geom, p)
+        function obj = discs(geom, p, pClose)
             % constructor for the discs class geom is the presets for the
             % geometry of the discs and p are the preferences for the
             % chunker objects
@@ -31,6 +31,11 @@ classdef discs
                 p = chunkerpref();
             else
                 p = chunkerpref(p);
+            end
+            if( nargin < 3)
+                % Meaning that we dont have information about points close
+                % to other discs, pClose is a structured array
+                pClose = [];
             end
 
             ctrs = geom.ctrs;
@@ -50,11 +55,25 @@ classdef discs
                 end
             end
 
+            if( isfield(pClose(1), 'thetasClose')  )
+                % Meaning that we have close points
+                for i=1:nDiscs
+                    % Check that we have the minimum number of breakpoints
+                    % on each disc
+                    if( nBreakPoints(i) < 4*pClose(i).nClose )
+                        nBreakPoints(i) = 4*pClose(i).nClose;
+                    end
+                end
+            end
+
             obj.ctrs = ctrs;
             obj.Rs = Rs;
             obj.nBreakPoints = nBreakPoints;
             obj.nDiscs = nDiscs;
             listChnkrs(1, nDiscs) = chunker(); % list of nDiscs of chunkers
+
+
+
             for i=1:nDiscs
                 breakpoints = linspace(0, 2*pi, nBreakPoints(i));
                 center = ctrs(:, i);

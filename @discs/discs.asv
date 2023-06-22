@@ -17,7 +17,7 @@ classdef discs
     end
 
     methods
-        function obj = discs(geom, p)
+        function obj = discs(geom, p, pClose)
             % constructor for the discs class geom is the presets for the
             % geometry of the discs and p are the preferences for the
             % chunker objects
@@ -32,6 +32,11 @@ classdef discs
             else
                 p = chunkerpref(p);
             end
+            if( nargin < 3)
+                % Meaning that we dont have information about points close
+                % to other discs, pClose is a structured array
+                pClose = [];
+            end
 
             ctrs = geom.ctrs;
             nDiscs = size(ctrs, 2);
@@ -44,8 +49,21 @@ classdef discs
             end
             if isfield(geom, 'nBreakPoints')
                 if( size(geom.nBreakPoints, 2) < nDiscs)
-                    nBreakPoints = geom.nBreakPoints(1)
-                nBreakPoints = geom.nBreakPoints;
+                    nBreakPoints = geom.nBreakPoints(1)*ones(1, nDiscs);
+                else
+                    nBreakPoints = geom.nBreakPoints;
+                end
+            end
+
+            if( isfield(pClose(1), 'thetasClose')  )
+                % Meaning that we have close points
+                for i=1:nDiscs
+                    % Check that we have the minimum number of breakpoints
+                    % on each disc
+                    if( nBreakPoints(i) < 4*pClose(i).nClose )
+                        nBreakPoints(i) = 4*pClose(i).nClose;
+                    end
+                end
             end
 
             obj.ctrs = ctrs;
@@ -53,11 +71,14 @@ classdef discs
             obj.nBreakPoints = nBreakPoints;
             obj.nDiscs = nDiscs;
             listChnkrs(1, nDiscs) = chunker(); % list of nDiscs of chunkers
+
+
+
             for i=1:nDiscs
                 breakpoints = linspace(0, 2*pi, nBreakPoints(i));
                 center = ctrs(:, i);
                 R = Rs(i);
-                listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), breakpoints );
+                listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), breakpoints, [], p );
             end
             chnkrs = merge(listChnkrs);
             obj.listChnkrs = listChnkrs;

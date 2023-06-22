@@ -185,3 +185,18 @@ h=surf(xxtarg,yytarg,zztarg);
 set(h,'EdgeColor','none')
 title("Elastance Problem - Potential off surface")
 colorbar
+
+
+
+% If capacitance problem was run before
+difSolOff = Dsol_elastance - Dsol_capacitance;
+figure()
+zztarg = nan(size(xxtarg));
+zztarg(~in) = difSolOff;
+h=surf(xxtarg,yytarg,zztarg);
+set(h,'EdgeColor','none')
+title("Diference in potentials Capacitance and Elastance")
+colorbar
+fprintf('%5.2e s : Max error between computed potentials\n',max(abs(difSolOff)));
+fprintf('%5.2e s : l2 error between computed potentials\n', norm(difSolOff));
+
