@@ -19,7 +19,7 @@ classdef discs
     end
 
     methods
-        function obj = discs(geom, p, pClose)
+        function obj = discs(geom, pClose, p)
             % constructor for the discs class geom is the presets for the
             % geometry of the discs and p are the preferences for the
             % chunker objects
@@ -29,12 +29,7 @@ classdef discs
                 geom.Rs = 1;
                 geom.nBreakPoints = 10;
             end
-            if ( nargin < 2 )
-                p = chunkerpref();
-            else
-                p = chunkerpref(p);
-            end
-            if( nargin < 3)
+            if( nargin < 2)
                 % Meaning that we dont have information about points close
                 % to other discs, pClose is a structured array
                 pClose = [];
@@ -47,6 +42,11 @@ classdef discs
                 else
                     infoClose = true;
                 end
+            end
+            if ( nargin < 3 )
+                p = chunkerpref();
+            else
+                p = chunkerpref(p);
             end
 
             % Settings for the geometry of the discs
