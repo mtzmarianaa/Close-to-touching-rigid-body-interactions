@@ -15,3 +15,4 @@ For suspensions of identical discs in 2D, we present a fast and accurate method 
   - Week 2 (5 -9 Jun): Read more about boundary integral methods, finish onboarding.
   - Week 3 (12 - 16 Jun): Understand chunkie, Green's identity test.
   - Week 4 (19 - 23 Jun): Capacitance and Elastance problems
+  - Week 5 (26 - 30 Jun): Add adaptive panels for close to touching interactions
