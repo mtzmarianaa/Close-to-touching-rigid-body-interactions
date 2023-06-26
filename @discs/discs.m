@@ -16,6 +16,7 @@ classdef discs
         nBreakPoints
         pClose
         infoClose
+        indCloseChunk
     end
 
     methods
@@ -35,8 +36,10 @@ classdef discs
                 pClose = [];
                 infoClose = false;
             else
-                % See if we have the correct amount of discs 
-                if( length(pClose) ~= size(geom.ctrs, 2) )
+                % See if we have the correct amount of discs or if we have
+                % information about which discs are these points close to
+                if( length(pClose) ~= size(geom.ctrs, 2) || ~isfield(pClose, 'discClose') ...
+                        || ~isfield(pClose, 'pRef') )
                     pClose = [];
                     infoClose = false;
                 else
@@ -76,28 +79,30 @@ classdef discs
                 % Meaning that we DO have close points
 
                 for i=1:nDiscs
-                    % Check that we have the minimum number of breakpoints
-                    % on each disc
-                    if( nBreakPoints(i) < 3*pClose(i).nClose )
-                        nBreakPoints(i) = 3*pClose(i).nClose;
-                    end
 
                     % If we aren't given the number of close points,
                     % calculate them
-                    if ~isfield(pClose(i), 'nClose')
-                        pClose.nClose = length(pClose(i).thetas);
+                    if (~isfield(pClose(i), 'nClose') || isempty(pClose(i).nClose) )
+                        pClose(i).nClose = length(pClose(i).thetas);
                     end
 
                     % If we aren't given the angle for the region to be
                     % considered as close, set it to pi/3
-                    if ( ~isfield(pClose(i), 'thetasReg') || length(pClose(i).thetasReg) ~=  pClose(i).nClose)
-                        pClose(i).thetasReg = pi/6*ones(pClose(i).nClose);
+                    if ( ~isfield(pClose(i), 'thetasReg') || ...
+                            length(pClose(i).thetasReg) ~=  pClose(i).nClose)
+                        pClose(i).thetasReg = pi/3*ones(pClose(i).nClose, 1);
                     end
 
                     % Sort them
                     [pClose(i).thetas, I] = sort(pClose(i).thetas);
                     pClose(i).thetas = mod(pClose(i).thetas, 2*pi); % Just that everything agrees
                     pClose(i).thetasReg = pClose(i).thetasReg(I);
+
+                    % Check that we have the minimum number of breakpoints
+                    % on each disc
+                    if( nBreakPoints(i) < 3*pClose(i).nClose )
+                        nBreakPoints(i) = 3*pClose(i).nClose;
+                    end
 
                 end
             end
@@ -115,7 +120,7 @@ classdef discs
             % pointClose +- pi/6. Then add the other breakpoints
             % accordingly. Remember that pClose.thetasClose is in the angle
             % space, not in the coordinate space (so this is easier)
-
+            indCloseChunk = [];
             if( infoClose )
                 % If we have close to touching points
                 for i=1:nDiscs
@@ -139,8 +144,8 @@ classdef discs
                     % Compute the far intervals
                     for k=1:(thisnClose - 1)
                         j = 3*k;
-                        farIntervals(k, :) = [breakpoints(j-2), breakpoints(j)]; 
-                        lenFarIntervals(k) = breakpoints(j) - breakpoints(j-2);
+                        farIntervals(k, :) = [breakpoints(j), breakpoints(j+1)]; 
+                        lenFarIntervals(k) = breakpoints(j+1) - breakpoints(j);
                     end
                     % For the last one
                     farIntervals(thisnClose, :) = [breakpoints(3*thisnClose),  breakpoints(1) ]; 
@@ -162,9 +167,11 @@ classdef discs
                     % Compute the actual breakpoints
                     for k = 1:thisnClose
                         if( farIntervals(k, 1) < farIntervals(k, 2) )
-                            grid = linspace( farIntervals(k, 1), farIntervals(k, 2), nBreakPointsFar(k) + 2  )';
+                            grid = linspace( farIntervals(k, 1), farIntervals(k, 2), ...
+                                nBreakPointsFar(k) + 2  )';
                         else
-                            grid = linspace( farIntervals(k, 1), 2*pi+farIntervals(k, 2), nBreakPointsFar(k) + 2  )';
+                            grid = linspace( farIntervals(k, 1), 2*pi+farIntervals(k, 2), ...
+                                nBreakPointsFar(k) + 2  )';
                             grid = mod(grid, 2*pi);
                         end
                         breakpointsFar( (nBk(k)+1):nBk(k+1) ) = grid(2:(length(grid)-1));
@@ -172,13 +179,24 @@ classdef discs
 
                     % Add them, sort them, put them in the interval 0 2pi
                     breakpoints = [breakpoints; breakpointsFar];
-                    breakpoints = sort( mod(breakpoints, 2*pi) );
+                    [breakpoints, indBk] = sort( mod(breakpoints, 2*pi) );
+                    [~, indBk] = sort(indBk); % useful for the indexing of the close points
                     % Make sure everything is connected
                     breakpoints = [0; 2*pi; breakpoints];
                     breakpoints = unique(breakpoints);
 
                     % Add this info to the list of chunkers
-                    listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), breakpoints, [], p );
+                    listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
+                        breakpoints, [], p );
+
+                    % Compute the list of close chunks in this chunker
+                    indCloseChunk(i).ind = zeros(2*thisnClose, 1);
+                    for k=1:thisnClose
+                        j = 3*k;
+                        r = 2*k;
+                        indCloseChunk(i).ind(r-1, 1) = indBk(j-2);
+                        indCloseChunk(i).ind(r, 1) = indBk(j-1);
+                    end
 
                 end
             else
@@ -187,7 +205,8 @@ classdef discs
                     breakpoints = linspace(0, 2*pi, nBreakPoints(i));
                     center = ctrs(:, i);
                     R = Rs(i);
-                    listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), breakpoints, [], p );
+                    listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
+                        breakpoints, [], p );
                 end
             end
             % Merge into a single chunkr object
@@ -195,9 +214,12 @@ classdef discs
             obj.listChnkrs = listChnkrs;
             obj.chnkrs = chnkrs;
 
+            obj.indCloseChunk = indCloseChunk;
+
         end
 
     end
 
 end
+
 

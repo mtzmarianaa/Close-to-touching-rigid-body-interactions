@@ -16,9 +16,9 @@ u2 = @(x) 1+0*x(1, :);
 
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
 ctrs = [0 5 ;0 0]; % Centers of the circles
-Rs = [1.5; 1.25]; % Radi of the circles
+Rs = [0.75; 0.75]; % Radi of the circles
 n = length(uk);
-nBreakPoints = [10; 10];
+nBreakPoints = [13; 13];
 
 
 % Define points on surface
