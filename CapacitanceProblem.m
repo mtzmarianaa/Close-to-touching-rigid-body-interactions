@@ -1,32 +1,36 @@
-% Capacitance problem (2 discs first)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [q, sigma, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, plt, outopt)
+% Given the description of the geometry of nCircles solve the capacitance
+% problem. 
+% IN: ds : a discs object with the given geometry of the discs
+%        uk:  u defined at the boundary
+%        plot: boolean, wheather to plot or not
+% OUT:  q: charges on the n given discs
+%           sigma: on bundary density
 
-clear all
-close all
-format long
-% For a point charge
-x0 = 1/(2*sqrt(2))*[1; 1];
+if( nargin < 3 )
+    plt = false;
+end
+if( nargin < 4 )
+    outopt = [];
+    outopt.fact = 3;
+    outopt.nplot = 250;
+end
 
-%u1 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
-%u2 = @(x) log(1./vecnorm( bsxfun(@minus, x, x0) ))/(2.0*pi);
+if ~isfield(outopt, 'fact')
+    outopt.fact = 3;
+end
 
 
-u1 = @(x) 0*x(1, :);
-u2 = @(x) 1+0*x(1, :);
+if ~isfield(outopt, 'nplot')
+    outopt.nplot = 250;
+end
 
-uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
-ctrs = [0 5 ;0 0]; % Centers of the circles
-Rs = [0.75; 0.75]; % Radi of the circles
 n = length(uk);
-nBreakPoints = [13; 13];
+ctrs = ds.ctrs;
+Rs = ds.Rs;
+nBreakPoints = ds.nBreakPoints;
 
 
-% Define points on surface
-geom = [];
-geom.ctrs = ctrs;
-geom.Rs = Rs;
-geom.nBreakPoints = nBreakPoints;
-ds = discs(geom);
 Ntot = ds.chnkrs.npt;
 nB = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
 nB = [0 nB]; % Useful for filling in the matrix K
@@ -36,28 +40,30 @@ for i=2:(n+1)
 end
 
 
-% Plot the circles
-figure()
-cq = [0 232/255 255/255];
-cO = [147/255 155/255 255/255];
-cS = [155/255 0 255/255];
-plot(ds.chnkrs, '-o', 'Color', cq)
-hold on
-quiver(ds.chnkrs, 'Color', cO)
-axis equal
-title("Capacitance Problem - Circles and Normals")
 
-% Plot the uks on surface
-figure()
-for i =1:n
-    chnkri = ds.listChnkrs(i); 
-    xOnSurface = reshape(chnkri.r, 2, chnkri.k*chnkri.nch);
-    u_toUse = uk{i}(xOnSurface);
-    scatter3(xOnSurface(1, :), xOnSurface(2, :), u_toUse, [], cO)
+if( plt )
+    % Plot the circles
+    figure()
+    cq = [0 232/255 255/255];
+    cO = [147/255 155/255 255/255];
+    cS = [155/255 0 255/255];
+    plot(ds.chnkrs, '-o', 'Color', cq)
     hold on
+    quiver(ds.chnkrs, 'Color', cO)
+    axis equal
+    title("Capacitance Problem - Circles and Normals")
+    % Plot the uks on surface
+    figure()
+    for i =1:n
+        chnkri = ds.listChnkrs(i); 
+        xOnSurface = reshape(chnkri.r, 2, chnkri.k*chnkri.nch);
+        u_toUse = uk{i}(xOnSurface);
+        scatter3(xOnSurface(1, :), xOnSurface(2, :), u_toUse, [], cO)
+        hold on
+    end
+    title("Capacitance Problem - uk on surface")
+    hold off
 end
-title("Capacitance Problem - uk on surface")
-hold off
 
 
 % BUILD THE KERNEL FUNCTIONS
@@ -96,8 +102,7 @@ for k=1:n
     end
 end
 
-K2 = chunkermat(ds.chnkrs, DLplusSL, opts);
-K2 = K2 + 0.5*speye(size(K));
+
 
 % Fill the RHS
 
@@ -116,106 +121,90 @@ end
 % Solve for sigma, the unknown density
 
 s = tic();
-sigma_B = K\rhs;
-t1 = toc(s);
-fprintf("%5.2e s :time taken to solve the linear system with Matlab's backslash\n", t1);
-
-s = tic();
-sigma_G = gmres(K, rhs, [], 1e-14, 100);
+sigma = gmres(K, rhs, [], 1e-14, 100);
 t2 = toc(s);
 fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t2);
 
-
-% Plot the sigma_ks on surface
-figure()
-allXonSurface = reshape(ds.chnkrs.r, 2, ds.chnkrs.k*ds.chnkrs.nch);
-scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_B, [], cq)
-title("Capacitance Problem - sigma on surface, Matlab's backslash")
-
-
-% Plot the sigma_ks on surface
-figure()
-scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma_G, [], cq)
-title("Capacitance Problem - sigma on surface, GMRES")
-
-
+if(plt)
+    % Plot the sigma_ks on surface
+    allXonSurface = reshape(ds.chnkrs.r, 2, ds.chnkrs.k*ds.chnkrs.nch);
+    figure()
+    scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma, [], cq)
+    title("Capacitance Problem - sigma on surface, GMRES")
+end
 
 % Compute the boundary integral of sigma over the discs to find q
-q_B = zeros(n, 1);
-q_G = zeros(n, 1);
+q = zeros(n, 1);
 opts.usesmooth = false;
 
 for i=1:n
     chnkri = ds.listChnkrs(i);
     start_row = nk(i) + 1;
     end_row = nk(i + 1);
-    sigma_Bi = sigma_B(start_row:end_row);
-    q_B(i) = chunkerintegral(chnkri, sigma_Bi, opts);
-    fprintf("%5.5e : charge at disk %1.0e with backslash\n", q_B(i), i);
-    sigma_Gi = sigma_G(start_row:end_row);
-    q_G(i) = chunkerintegral(chnkri, sigma_Gi, opts);
-    fprintf("%5.5e : charge at disk %1.0e with GMRES\n\n", q_G(i), i);
+    sigma_i = sigma(start_row:end_row);
+    q(i) = chunkerintegral(chnkri, sigma_i, opts);
+    fprintf("%5.5e : charge at disk %1.0e with GMRES\n\n", q(i), i);
+end
+
+
+if(plt)
+    % Plot the charges qk
+    figure()
+    for i=1:n
+        [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q(i) , ds.Rs(i) , ds.Rs(i) , 0 );
+        s = surf(X,Y,Z,'FaceAlpha',0.5);
+        s.EdgeColor = 'none';
+        hold on
+    end
+    colorbar
+    title("Capacitance Problem - Total charge on each disc, GMRES")
+    hold off    
+
+end
+
+if( nargout > 2 )
+    % We also need zztarg, xxtarg, yytarg
+    % Find points off surface
+    rmin = min(ds.chnkrs);
+    rmin = rmin - outopt.fact*[1;1];
+    rmax = max(ds.chnkrs);
+    rmax = rmax + outopt.fact*[1;1];
+    nplot = outopt.nplot;
+    hx = (rmax(1)-rmin(1))/nplot;
+    hy = (rmax(2)-rmin(2))/nplot;
+    xtarg = linspace(rmin(1)+hx/2,rmax(1)-hx/2,nplot); 
+    ytarg = linspace(rmin(2)+hy/2,rmax(2)-hy/2,nplot);
+    [xxtarg,yytarg] = meshgrid(xtarg,ytarg);
+    targets = zeros(2,length(xxtarg(:)));
+    targets(1,:) = xxtarg(:); 
+    targets(2,:) = yytarg(:);
+    
+    s = tic; 
+    in = chunkerinterior(ds.chnkrs , targets ); 
+    t3 = toc(s);
+    fprintf('%5.2e s : time to find points off surface\n',t3)
+    
+    % Evaluate points off surface
+    s = tic;
+    Dsol_capacitance = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma , targets(:,~in)); 
+    t4 = toc(s);
+    fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t4);
+    
+    % Add the off surface evaluations
+    zztarg = nan(size(xxtarg));
+    zztarg(~in) = Dsol_capacitance;
+    
+    if(plt)
+        %%%%% Plot u off surface
+        figure()
+        h=surf(xxtarg,yytarg,zztarg);
+        set(h,'EdgeColor','none')
+        title("Capacitance Problem - Potential in the exterior")
+        colorbar
+    
+    end
 end
 
 
 
-% Plot the charges qk
-figure()
-for i=1:n
-    [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_B(i) , Rs(i) , Rs(i) , 0 );
-    s = surf(X,Y,Z,'FaceAlpha',0.5);
-    s.EdgeColor = 'none';
-    hold on
 end
-colorbar
-title("Capacitance Problem - Total charge on each disc, Matlab's backslash")
-hold off
-
-
-
-% Plot the charges qk
-figure()
-for i=1:n
-    [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q_G(i) , Rs(i) , Rs(i) , 0 );
-    s = surf(X,Y,Z,'FaceAlpha',0.5);
-    s.EdgeColor = 'none';
-    hold on
-end
-colorbar
-title("Capacitance Problem - Total charge on each disc, GMRES")
-hold off
-
-
-
-%%%%% Plot u off surface
-% Find points off surface
-rmin = min(ds.chnkrs ) - 5*[1;1]; 
-rmax = max(ds.chnkrs ) + 5*[1;1];
-nplot = 250;
-hx = (rmax(1)-rmin(1))/nplot;
-hy = (rmax(2)-rmin(2))/nplot;
-xtarg = linspace(rmin(1)+hx/2,rmax(1)-hx/2,nplot); 
-ytarg = linspace(rmin(2)+hy/2,rmax(2)-hy/2,nplot);
-[xxtarg,yytarg] = meshgrid(xtarg,ytarg);
-targets = zeros(2,length(xxtarg(:)));
-targets(1,:) = xxtarg(:); targets(2,:) = yytarg(:);
-
-s = tic; 
-in = chunkerinterior(ds.chnkrs , targets ); 
-t3 = toc(s);
-fprintf('%5.2e s : time to find points off surface\n',t3)
-
-% Evaluate points off surface
-s = tic;
-Dsol_capacitance = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma_B , targets(:,~in)); 
-t4 = toc(s);
-fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t4);
-
-% Plot off surface
-figure(7)
-zztarg = nan(size(xxtarg));
-zztarg(~in) = Dsol_capacitance;
-h=surf(xxtarg,yytarg,zztarg);
-set(h,'EdgeColor','none')
-title("Capacitance Problem - Potential in the exterior, Capacitance")
-colorbar

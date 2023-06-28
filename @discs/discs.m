@@ -8,15 +8,21 @@ classdef discs
     % Author: Mariana Martinez
 
     properties(Access = public)
-        ctrs
-        Rs
-        listChnkrs
-        chnkrs
-        nDiscs
-        nBreakPoints
-        pClose
-        infoClose
-        indCloseChunk
+        ctrs % center of the discs
+        Rs % radii of discs
+        listChnkrs % list of chunker objects, one chunker per disc
+        chnkrs % the chunker object with information from all discs
+        nDiscs % number of discs
+        nBreakPoints % number of breakpoints per disc
+        saveAngles % boolean, wheather to save the breakpoints of each disc in parameter space
+        thetas % if saveAngles true, the breakpoints of each disc in parameters space
+        infoClose % boolean, if information about close chunks is given or not
+        pClose % if given, information about the chunks on each disc close to other discs
+        indCloseChunk % if close information, struct array with indices of chunks considered to be in the 
+                               %  close region this is going to change as
+                               %  we refine. For each theta close in each
+                               %  disc we have two chunks considered to be
+                               %  in the close region
     end
 
     methods
@@ -58,6 +64,8 @@ classdef discs
             obj.nDiscs = nDiscs;
             Rs = 0.75*ones(1, nDiscs); % all discs with same radii = 0.75 (NEVER USE 1)
             nBreakPoints = 10*ones(1, nDiscs);
+            saveAngles = true;
+            thetas = []; % Here is where we are going to save (or not) the parametrization thetas
 
             if isfield(geom, 'Rs')
                 % No field for radii, standard option
@@ -71,6 +79,11 @@ classdef discs
                     % with the same radius
                     nBreakPoints = geom.nBreakPoints(1)*ones(1, nDiscs);
                 end
+            end
+            if isfield(geom, 'saveAngles')
+                % We know if the user wants to save the angles for the
+                % parametrization
+                saveAngles = geom.saveAngles;
             end
 
             % Settings for the geometry of the close to touching region of
@@ -189,6 +202,11 @@ classdef discs
                     listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
                         breakpoints, [], p );
 
+                    % If the user wants to save these thetas, save them
+                    if saveAngles
+                        thetas(i).breakpoints = breakpoints;
+                    end
+
                     % Compute the list of close chunks in this chunker
                     indCloseChunk(i).ind = zeros(2*thisnClose, 1);
                     for k=1:thisnClose
@@ -207,13 +225,17 @@ classdef discs
                     R = Rs(i);
                     listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
                         breakpoints, [], p );
+                    if saveAngles
+                        thetas(i).breakpoints = breakpoints;
+                    end
                 end
             end
             % Merge into a single chunkr object
             chnkrs = merge(listChnkrs);
             obj.listChnkrs = listChnkrs;
             obj.chnkrs = chnkrs;
-
+            obj.saveAngles = saveAngles;
+            obj.thetas = thetas;
             obj.indCloseChunk = indCloseChunk;
 
         end
