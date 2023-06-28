@@ -29,7 +29,34 @@ classdef discs
         function obj = discs(geom, pClose, p)
             % constructor for the discs class geom is the presets for the
             % geometry of the discs and p are the preferences for the
-            % chunker objects
+            % chunker objects.
+            %
+            % Input:
+            %        geom - geometry options for the discs (at least ctrs provided)
+            %                   geom.ctrs = centers of the discs
+            %                   geom.Rs = radii of the discs
+            %                   geom.nBreakPoint = number of breakpoints to
+            %                           use on each disc, if just one, all discs
+            %                           with same number of breakpoints
+            %                   geom.saveAngles = bool, if save breakpoints
+            %                           in parameter space
+            %        pClose - information about the close to touching
+            %            regions (at least thetas, discClose, pRef given)
+            %                     pClose(i).thetas = at disc i the point
+            %                     closest to another disc in parameter
+            %                     space
+            %                     pClose(i).nClose = number of points at
+            %                     disc i considered to be in the close
+            %                     region
+            %                     pClose(i).thetasReg = angle of region
+            %                     considered to be close
+            %                     pClose(i).discClose = per point in the
+            %                     close region, which disc is that point
+            %                     closest to
+            %                     pClose(i).pRef = index of point in
+            %                     another disc closest to disc i (think
+            %                     edges)
+            %        p - chunker preferences
             if ( nargin < 1 )
                 geom = [];
                 geom.ctrs = [0;0];
