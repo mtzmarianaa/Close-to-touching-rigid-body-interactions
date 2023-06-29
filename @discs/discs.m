@@ -231,7 +231,7 @@ classdef discs
 
                     % If the user wants to save these thetas, save them
                     if saveAngles
-                        thetas(i).breakpoints = breakpoints;
+                        thetas(i).breakpoints = breakpoints';
                     end
 
                     % Compute the list of close chunks in this chunker
@@ -242,6 +242,7 @@ classdef discs
                         indCloseChunk(i).ind(r-1, 1) = indBk(j-2);
                         indCloseChunk(i).ind(r, 1) = indBk(j-1);
                     end
+                    indCloseChunk(i).ind = sort(indCloseChunk(i).ind );
 
                 end
             else

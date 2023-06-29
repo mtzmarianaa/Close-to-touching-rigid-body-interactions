@@ -1,4 +1,4 @@
-function chs = chunksInParameter(chnkr, thetas)
+function chs = chunksInParameter(chnkr, thetas, x)
 % Given a chunker object get all the chunks in parameter space
 %
 % Input:
@@ -8,6 +8,11 @@ function chs = chunksInParameter(chnkr, thetas)
 k = chnkr.k;
 nch = chnkr.nch; % Number of chunks
 chs = zeros(k, nch);
+
+
+if( nargin < 3 )
+    x = lege.exps(chnkr.k);
+end
 
 
 if( nargin < 2)
@@ -20,7 +25,7 @@ ths = [thetas thetas(1)]; % For the loop
 for i = 1:nch
     tha = ths(i);
     thb = ths(i+1);
-    chs(:, i) = chunkInParameter(chnkr, tha, thb);
+    chs(:, i) = chunkInParameter(chnkr, tha, thb, x);
 end
 
 end

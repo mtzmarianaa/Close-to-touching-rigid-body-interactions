@@ -32,7 +32,10 @@ nBreakPoints = ds.nBreakPoints;
 
 
 Ntot = ds.chnkrs.npt;
-nB = (ds.nBreakPoints - 1).*16; % Number of discretization points on each disk
+nB = zeros(1, n); % Number of discretization points on each disk
+for i=1:n
+    nB(i) = ds.listChnkrs(i).npt;
+end
 nB = [0 nB]; % Useful for filling in the matrix K
 nk = zeros(size(nB));
 for i=2:(n+1)
