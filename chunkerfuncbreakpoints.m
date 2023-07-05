@@ -1,4 +1,4 @@
-function chnkr = chunkerfuncbreakpoints(fcurve, ts, cparams, pref)
+function chnkr = chunkerfuncbreakpoints(fcurve, ts, cparams, pref, connected)
     
     if ( nargin < 3 )
         cparams = [];
@@ -8,6 +8,10 @@ function chnkr = chunkerfuncbreakpoints(fcurve, ts, cparams, pref)
         pref = chunkerpref();
     else
         pref = chunkerpref(pref);
+    end
+
+    if( nargin < 5)
+        connected = true;
     end
     
     ta = 0; tb = 2*pi;
@@ -37,8 +41,15 @@ function chnkr = chunkerfuncbreakpoints(fcurve, ts, cparams, pref)
         chnkr.h(i) = (b-a)/2;
         chnkr.adj(:,i) = [i-1 i+1];
     end
-    chnkr.adj(1,1)   = nch;
-    chnkr.adj(2,nch) = 1;
+
+    if connected
+        chnkr.adj(1,1)   = nch;
+        chnkr.adj(2,nch) = 1;
+    else
+        chnkr.adj(1,1) = 0;
+        chnkr.adj(2, nch) = 0;
+    end
+
     chnkr.n = normals(chnkr);
 
 end

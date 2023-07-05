@@ -10,19 +10,16 @@ classdef discs
     properties(Access = public)
         ctrs % center of the discs
         Rs % radii of discs
-        listChnkrs % list of chunker objects, one chunker per disc
+        listGammas % list of gammas, close to touching parts
+        nGammas % number of gammas, close to touching parts
+        gamma1 % chunkr object with information about the far part
         chnkrs % the chunker object with information from all discs
         nDiscs % number of discs
         nBreakPoints % number of breakpoints per disc
-        saveAngles % boolean, wheather to save the breakpoints of each disc in parameter space
-        thetas % if saveAngles true, the breakpoints of each disc in parameters space
         infoClose % boolean, if information about close chunks is given or not
-        pClose % if given, information about the chunks on each disc close to other discs
-        indCloseChunk % if close information, struct array with indices of chunks considered to be in the 
-                               %  close region this is going to change as
-                               %  we refine. For each theta close in each
-                               %  disc we have two chunks considered to be
-                               %  in the close region
+        I % if given, information about the chunks on each disc close to other discs
+        indGamma % if close to touching information given, this is the index where the close to touching part
+                         % starts in chnkrs (i.e. where K22 begins in K)
     end
 
     methods
@@ -38,24 +35,25 @@ classdef discs
             %                   geom.nBreakPoint = number of breakpoints to
             %                           use on each disc, if just one, all discs
             %                           with same number of breakpoints
-            %                   geom.saveAngles = bool, if save breakpoints
-            %                           in parameter space
             %        pClose - information about the close to touching
             %            regions (at least thetas, discClose, pRef given)
-            %                     pClose(i).thetas = at disc i the point
+            %                     pClose(i).data = (nClose x 3 matrix) at disc i the point
             %                     closest to another disc in parameter
-            %                     space
+            %                     space. The first column is the
+            %                     point in parameter (angle) space. The 
+            %                     second column is the index of
+            %                     the other disc which that point is
+            %                     closest to. The third column is the index
+            %                     of the point in the other disc that is
+            %                     closest to disc i.
             %                     pClose(i).nClose = number of points at
             %                     disc i considered to be in the close
             %                     region
             %                     pClose(i).thetasReg = angle of region
             %                     considered to be close
-            %                     pClose(i).discClose = per point in the
-            %                     close region, which disc is that point
-            %                     closest to
-            %                     pClose(i).pRef = index of point in
-            %                     another disc closest to disc i (think
-            %                     edges)
+            %        infoClose - boolean, indicates if we have information
+            %                         regarging close to touching
+            %                         interactions.
             %        p - chunker preferences
             if ( nargin < 1 )
                 geom = [];
@@ -69,10 +67,8 @@ classdef discs
                 pClose = [];
                 infoClose = false;
             else
-                % See if we have the correct amount of discs or if we have
-                % information about which discs are these points close to
-                if( length(pClose) ~= size(geom.ctrs, 2) || ~isfield(pClose, 'discClose') ...
-                        || ~isfield(pClose, 'pRef') )
+                % See if we have the correct amount of discs 
+                if( length(pClose) ~= size(geom.ctrs, 2) )
                     pClose = [];
                     infoClose = false;
                 else
@@ -91,7 +87,6 @@ classdef discs
             obj.nDiscs = nDiscs;
             Rs = 0.75*ones(1, nDiscs); % all discs with same radii = 0.75 (NEVER USE 1)
             nBreakPoints = 10*ones(1, nDiscs);
-            saveAngles = true;
             thetas = []; % Here is where we are going to save (or not) the parametrization thetas
 
             if isfield(geom, 'Rs')
@@ -106,11 +101,6 @@ classdef discs
                     % with the same radius
                     nBreakPoints = geom.nBreakPoints(1)*ones(1, nDiscs);
                 end
-            end
-            if isfield(geom, 'saveAngles')
-                % We know if the user wants to save the angles for the
-                % parametrization
-                saveAngles = geom.saveAngles;
             end
 
             % Settings for the geometry of the close to touching region of
@@ -133,10 +123,8 @@ classdef discs
                         pClose(i).thetasReg = pi/3*ones(pClose(i).nClose, 1);
                     end
 
-                    % Sort them
-                    [pClose(i).thetas, I] = sort(pClose(i).thetas);
-                    pClose(i).thetas = mod(pClose(i).thetas, 2*pi); % Just that everything agrees
-                    pClose(i).thetasReg = pClose(i).thetasReg(I);
+                    % Sort them, build I
+                    [I, nGammas, pClose] = dsc.buildI(pClose, nDiscs);
 
                     % Check that we have the minimum number of breakpoints
                     % on each disc
@@ -161,8 +149,11 @@ classdef discs
             % accordingly. Remember that pClose.thetasClose is in the angle
             % space, not in the coordinate space (so this is easier)
             indCloseChunk = [];
+            indC = [];
+            indChnDisc = [];
             if( infoClose )
                 % If we have close to touching points
+                offsetIndC = zeros( (nDiscs + 1), 1 );
                 for i=1:nDiscs
                     center = ctrs(:, i);
                     R = Rs(i);
@@ -243,7 +234,10 @@ classdef discs
                         indCloseChunk(i).ind(r, 1) = indBk(j-1);
                     end
                     indCloseChunk(i).ind = sort(indCloseChunk(i).ind );
-
+                    % Add to the list of all close chunks in chnkrs
+                    offsetIndC(i+1) = sum( offsetIndC(1:(i)) ) + listChnkrs(i).nch;
+                    indC = [indC; indCloseChunk(i).ind + offsetIndC(i)];
+                    indChnDisc = [indChnDisc; i*ones(listChnkrs(i).nch, 1)];
                 end
             else
                 % If we dont have close to touching parts
@@ -253,9 +247,7 @@ classdef discs
                     R = Rs(i);
                     listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
                         breakpoints, [], p );
-                    if saveAngles
-                        thetas(i).breakpoints = breakpoints;
-                    end
+                    indChnDisc = [indChnDisc; i*ones(listChnkrs(i).nch, 1)];
                 end
             end
             % Merge into a single chunkr object
@@ -265,7 +257,9 @@ classdef discs
             obj.saveAngles = saveAngles;
             obj.thetas = thetas;
             obj.indCloseChunk = indCloseChunk;
-
+            obj.indC = indC;
+            obj.flagReorder = false;
+            obj.indChnDisc = indChnDisc;
         end
 
     end
