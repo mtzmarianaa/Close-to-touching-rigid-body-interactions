@@ -27,7 +27,7 @@ for r=1:nGammas
 
     % For Di
     i = I(r, 1);
-    currentInd_i = neisClose(i).currentInd;
+    currentInd_i = neisClose(i).currentInd
     thetaReg_i = pClose(i).thetasReg(currentInd_i);
     R_i = geom.Rs(i);
     ctr_i = geom.ctrs(:, i);
@@ -59,7 +59,7 @@ for r=1:nGammas
     neisClose(i).map(currentInd_i, 2) = nStart_i;
     neisClose(i).map(currentInd_i + 1, 1) = endPoints_i ;
     neisClose(i).map(currentInd_i + 1, 2) = nEnd_i;
-    neisClose(i).currentInd = neisClose(i).currentInd + 2;
+    neisClose(i).currentInd = neisClose(i).currentInd + 1;
 
 
     % Start building the part of gamma_r from Ds, add information to
@@ -78,7 +78,7 @@ for r=1:nGammas
     neisClose(s).map(currentInd_s, 2) = nStart_s;
     neisClose(s).map(currentInd_s + 1, 1) = endPoints_s ;
     neisClose(s).map(currentInd_s + 1, 2) = nEnd_s;
-    neisClose(s).currentInd = neisClose(s).currentInd + 2;
+    neisClose(s).currentInd = neisClose(s).currentInd + 1;
 
     % Merge the two parts of gamma_r, add them to the list
     listGammas(1, r) = merge( [chnkr_gamma_r1, chnkr_gamma_r2] );
