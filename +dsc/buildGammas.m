@@ -27,7 +27,7 @@ for r=1:nGammas
 
     % For Di
     i = I(r, 1);
-    currentInd_i = neisClose(i).currentInd
+    currentInd_i = neisClose(i).currentInd;
     thetaReg_i = pClose(i).thetasReg(currentInd_i);
     R_i = geom.Rs(i);
     ctr_i = geom.ctrs(:, i);
@@ -55,10 +55,11 @@ for r=1:nGammas
     nchold = nchold + chnkr_gamma_r1.nch;
     endPoints_i = plusReg_i(1, end);
     nEnd_i = nchold;
-    neisClose(i).map(currentInd_i, 1) = startPoint_i;
-    neisClose(i).map(currentInd_i, 2) = nStart_i;
-    neisClose(i).map(currentInd_i + 1, 1) = endPoints_i ;
-    neisClose(i).map(currentInd_i + 1, 2) = nEnd_i;
+    t = 2*currentInd_i - 1;
+    neisClose(i).map(t, 1) = startPoint_i;
+    neisClose(i).map(t, 2) = nStart_i;
+    neisClose(i).map(t + 1, 1) = endPoints_i ;
+    neisClose(i).map(t + 1, 2) = nEnd_i;
     neisClose(i).currentInd = neisClose(i).currentInd + 1;
 
 
@@ -74,10 +75,11 @@ for r=1:nGammas
     nchold = nchold + chnkr_gamma_r2.nch;
     endPoints_s = plusReg_s(1, end);
     nEnd_s = nchold;
-    neisClose(s).map(currentInd_s, 1) = startPoint_s;
-    neisClose(s).map(currentInd_s, 2) = nStart_s;
-    neisClose(s).map(currentInd_s + 1, 1) = endPoints_s ;
-    neisClose(s).map(currentInd_s + 1, 2) = nEnd_s;
+    t = 2*currentInd_s - 1;
+    neisClose(s).map(t, 1) = startPoint_s;
+    neisClose(s).map(t, 2) = nStart_s;
+    neisClose(s).map(t + 1, 1) = endPoints_s ;
+    neisClose(s).map(t + 1, 2) = nEnd_s;
     neisClose(s).currentInd = neisClose(s).currentInd + 1;
 
     % Merge the two parts of gamma_r, add them to the list
