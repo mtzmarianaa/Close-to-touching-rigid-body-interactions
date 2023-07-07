@@ -155,9 +155,9 @@ classdef discs
                 indMissingFar = find(~gamma0.adj);
                 % Merge
                 chnkrs = merge([gamma0, listGammas]);
-                chnkrs .adj(gamma0.nch + indMissingClose) = neisMapFar;
+                chnkrs .adj(2*gamma0.nch + indMissingClose) = neisMapFar;
                 chnkrs.adj(indMissingFar) = gamma0.nch + neisMapClose;
-
+                
                 indGamma = gamma0.nch + 1;
 
             end
