@@ -11,8 +11,10 @@ classdef discs
         ctrs % center of the discs
         Rs % radii of discs
         listGammas % list of gammas, close to touching parts
+        chnkrsGammas % chunker object with the information of all gammas
         nGammas % number of gammas, close to touching parts
-        gamma1 % chunkr object with information about the far part
+        listFarChunks % list of chunkers (length of nDiscs) with information of far curve pieces
+        gamma0 % chunkr object with information about the far part
         chnkrs % the chunker object with information from all discs
         nDiscs % number of discs
         nBreakPoints % number of breakpoints per disc
@@ -103,6 +105,12 @@ classdef discs
                 end
             end
 
+            listGammas = [];
+            nGammas = 0;
+            I = [];
+            indGamma = 0;
+            chnkrsGammas = [];
+
             % Settings for the geometry of the close to touching region of
             % the discs
             if( infoClose  )
@@ -123,9 +131,6 @@ classdef discs
                         pClose(i).thetasReg = pi/3*ones(pClose(i).nClose, 1);
                     end
 
-                    % Sort them, build I
-                    [I, nGammas, pClose] = dsc.buildI(pClose, nDiscs);
-
                     % Check that we have the minimum number of breakpoints
                     % on each disc
                     if( nBreakPoints(i) < 3*pClose(i).nClose )
@@ -133,113 +138,32 @@ classdef discs
                     end
 
                 end
+
+                % Sort pClose, calculate amount of gammas and build I
+                [I, nGammas, pClose] = dsc.buildI(pClose, nDiscs);
+
+                % Build list for gammas, close to touching interactiong and
+                % the map for the neighbors
+                [listGammas, neisMapClose] = dsc.buildGammas(geom, pClose, I, nDiscs);
+                chnkrsGammas = merge(listGammas);
+
+                % Build gamma0, neisMapFar, listFarChunks
+                [gamma0, neisMapFar, listFarChunks] = dsc.buildGamma0(geom, pClose, I, nDiscs);
+
+                % Add the missing neis
+                indMissingClose = find(~chnkrsGammas.adj);
+                indMissingFar = find(~gamma0.adj);
+                % Merge
+                chnkrs = merge([gamma0, listGammas]);
+                chnkrs .adj(gamma0.nch + indMissingClose) = neisMapFar;
+                chnkrs.adj(indMissingFar) = gamma0.nch + neisMapClose;
+
+                indGamma = gamma0.nch + 1;
+
             end
 
-            % Set the parameters we already have
-            obj.ctrs = ctrs;
-            obj.Rs = Rs;
-            obj.nBreakPoints = nBreakPoints;
-            obj.nDiscs = nDiscs;
-            obj.pClose = pClose;
-            obj.infoClose = infoClose;
-            listChnkrs(1, nDiscs) = chunker(); % list of nDiscs of chunkers
-
-            % For each disc we need to add the points that are close AND
-            % pointClose +- pi/6. Then add the other breakpoints
-            % accordingly. Remember that pClose.thetasClose is in the angle
-            % space, not in the coordinate space (so this is easier)
-            indCloseChunk = [];
-            indC = [];
-            indChnDisc = [];
-            if( infoClose )
-                % If we have close to touching points
-                offsetIndC = zeros( (nDiscs + 1), 1 );
-                for i=1:nDiscs
-                    center = ctrs(:, i);
-                    R = Rs(i);
-                    thisnClose = pClose(i).nClose;
-                    breakpoints = zeros(3*thisnClose, 1); % breakpoints to initite chunkie
-                    farIntervals = zeros(thisnClose, 2); % intervals not in the close region
-                    lenFarIntervals = zeros(thisnClose, 1); 
-                    % Add the close to touching points and their regions
-                    for k=1:thisnClose
-                        j = 3*k;
-                        thetaR = pClose(i).thetasReg(k);
-                        thetaC = pClose(i).thetas(k);
-                        % add the close region
-                        breakpoints(j-2) = thetaC - thetaR/2;
-                        breakpoints(j-1) = thetaC;
-                        breakpoints(j) = thetaC + thetaR/2;
-                    end
-                    breakpoints = mod(breakpoints, 2*pi);
-                    % Compute the far intervals
-                    for k=1:(thisnClose - 1)
-                        j = 3*k;
-                        farIntervals(k, :) = [breakpoints(j), breakpoints(j+1)]; 
-                        lenFarIntervals(k) = breakpoints(j+1) - breakpoints(j);
-                    end
-                    % For the last one
-                    farIntervals(thisnClose, :) = [breakpoints(3*thisnClose),  breakpoints(1) ]; 
-                    lenFarIntervals(thisnClose) = breakpoints(1) - breakpoints(3*thisnClose);
-                    farIntervals = mod(farIntervals, 2*pi);
-                    lenFarIntervals = mod(lenFarIntervals, 2*pi);
-                    
-                    
-                    % Then determine the length of all the far section and
-                    % amount of breakpoints to put here
-                    lenFarSection = sum(lenFarIntervals);
-                    nBreakPointsFar = round( (nBreakPoints(i) - 3*thisnClose )*lenFarIntervals./lenFarSection );
-                    breakpointsFar = zeros( sum(nBreakPointsFar), 1 );
-                    nBk = [0; nBreakPointsFar];
-                    for k=2:(thisnClose + 1)
-                        nBk(k) = nBk(k - 1) + nBk(k);
-                    end
-                    
-                    % Compute the actual breakpoints
-                    for k = 1:thisnClose
-                        if( farIntervals(k, 1) < farIntervals(k, 2) )
-                            grid = linspace( farIntervals(k, 1), farIntervals(k, 2), ...
-                                nBreakPointsFar(k) + 2  )';
-                        else
-                            grid = linspace( farIntervals(k, 1), 2*pi+farIntervals(k, 2), ...
-                                nBreakPointsFar(k) + 2  )';
-                            grid = mod(grid, 2*pi);
-                        end
-                        breakpointsFar( (nBk(k)+1):nBk(k+1) ) = grid(2:(length(grid)-1));
-                    end
-
-                    % Add them, sort them, put them in the interval 0 2pi
-                    breakpoints = [breakpoints; breakpointsFar];
-                    [breakpoints, indBk] = sort( mod(breakpoints, 2*pi) );
-                    [~, indBk] = sort(indBk); % useful for the indexing of the close points
-                    % Make sure everything is connected
-                    breakpoints = [0; 2*pi; breakpoints];
-                    breakpoints = unique(breakpoints);
-
-                    % Add this info to the list of chunkers
-                    listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
-                        breakpoints, [], p );
-
-                    % If the user wants to save these thetas, save them
-                    if saveAngles
-                        thetas(i).breakpoints = breakpoints';
-                    end
-
-                    % Compute the list of close chunks in this chunker
-                    indCloseChunk(i).ind = zeros(2*thisnClose, 1);
-                    for k=1:thisnClose
-                        j = 3*k;
-                        r = 2*k;
-                        indCloseChunk(i).ind(r-1, 1) = indBk(j-2);
-                        indCloseChunk(i).ind(r, 1) = indBk(j-1);
-                    end
-                    indCloseChunk(i).ind = sort(indCloseChunk(i).ind );
-                    % Add to the list of all close chunks in chnkrs
-                    offsetIndC(i+1) = sum( offsetIndC(1:(i)) ) + listChnkrs(i).nch;
-                    indC = [indC; indCloseChunk(i).ind + offsetIndC(i)];
-                    indChnDisc = [indChnDisc; i*ones(listChnkrs(i).nch, 1)];
-                end
-            else
+            
+            if( ~ infoClose)
                 % If we dont have close to touching parts
                 for i=1:nDiscs
                     breakpoints = linspace(0, 2*pi, nBreakPoints(i));
@@ -247,19 +171,20 @@ classdef discs
                     R = Rs(i);
                     listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
                         breakpoints, [], p );
-                    indChnDisc = [indChnDisc; i*ones(listChnkrs(i).nch, 1)];
                 end
+                chnkrs = merge(listChnkrs);
             end
-            % Merge into a single chunkr object
-            chnkrs = merge(listChnkrs);
-            obj.listChnkrs = listChnkrs;
+
+            % Add these properties to the object
             obj.chnkrs = chnkrs;
-            obj.saveAngles = saveAngles;
-            obj.thetas = thetas;
-            obj.indCloseChunk = indCloseChunk;
-            obj.indC = indC;
-            obj.flagReorder = false;
-            obj.indChnDisc = indChnDisc;
+            obj.listGammas = listGammas;
+            obj.nGammas = nGammas;
+            obj.listFarChunks = listFarChunks;
+            obj.gamma0 = gamma0;
+            obj.I = I;
+            obj.indGamma = indGamma;
+                         
+
         end
 
     end

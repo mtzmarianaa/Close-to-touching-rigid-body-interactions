@@ -49,7 +49,7 @@ for r=1:nGammas
     plusReg_i = fanReg(alpha_0i, theta_ji); % breakpoints
     d_i = @(t) disc(t, center = ctr_i, radius = R_i);
     chnkr_gamma_r1 = chunkerfuncbreakpoints( d_i, plusReg_i, cparams, pref, false );
-    plusReg_i = mod(plusReg_i, 2*pi);
+    %plusReg_i = mod(plusReg_i, 2*pi);
     startPoint_i = plusReg_i(1, 1);
     nStart_i = 1 + nchold;
     nchold = nchold + chnkr_gamma_r1.nch;
@@ -69,7 +69,7 @@ for r=1:nGammas
     plusReg_s = fanReg(alpha_0s, theta_ks); % breakpoints
     d_s = @(t) disc(t, center = ctr_s, radius = R_s);
     chnkr_gamma_r2 = chunkerfuncbreakpoints( d_s, plusReg_s, cparams, pref, false );
-    plusReg_s = mod(plusReg_s, 2*pi);
+    %plusReg_s = mod(plusReg_s, 2*pi);
     startPoint_s = plusReg_s(1, 1);
     nStart_s = 1 + nchold;
     nchold = nchold + chnkr_gamma_r2.nch;
@@ -93,6 +93,11 @@ rowLims = zeros(nDiscs + 1, 1);
 
 for i=1:nDiscs
     neisClose(i).map = sortrows(neisClose(i).map);
+    % Flip accordingly
+    fr = neisClose(i).map(1, :);
+    nEnds = 2*pClose(i).nClose;
+    neisClose(i).map(1:(nEnds - 1), :) = neisClose(i).map(2:end, :);
+    neisClose(i).map(end, :) = fr;
     rowLims(i+1, 1) = rowLims(i, 1) + 2*pClose(i).nClose;
 end
 
