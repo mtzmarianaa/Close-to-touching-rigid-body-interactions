@@ -1,4 +1,4 @@
-function [q, sigma, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, plt, outopt)
+function [q, sigma, nGMRES, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, plt, outopt)
 % Given the description of the geometry of nCircles solve the capacitance
 % problem. 
 % IN: ds : a discs object with the given geometry of the discs
@@ -103,7 +103,11 @@ end
 
 % Solve for sigma, the unknown density
 s = tic();
-sigma = gmres(K, rhs, [], 1e-14, 100);
+if( nargout > 2 )
+    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, 100);
+else
+    sigma = gmres(K, rhs, [], 1e-14, 100);
+end
 t2 = toc(s);
 fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t2);
 
@@ -179,7 +183,7 @@ end
 
 
 
-if( nargout > 2 )
+if( nargout > 3 )
     % We also need zztarg, xxtarg, yytarg
     % Find points off surface
     rmin = min(ds.chnkrs);

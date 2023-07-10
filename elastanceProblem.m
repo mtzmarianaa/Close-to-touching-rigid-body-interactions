@@ -1,4 +1,4 @@
-function [uk, sigma, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, plt, outopt)
+function [uk, sigma, nGMRES, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, plt, outopt)
 % Given the description of the geometry of nCircles, solve the elastance
 % problem
 % IN: ds : a discs object with the given geometry of the discs
@@ -119,7 +119,7 @@ for i=1:nChunkers
         flag_points = repmat(flag, 1, ds.chnkrs.k);
         flag_points = flag_points';
         flag_points = logical( flag_points(:) );
-        flag_points_here = logical( zeros(1, Ntot) );
+        flag_points_here = false( 1, Ntot);
         flag_points_here(start_index:end_index) = flag_points(start_index:end_index);
         % Fill the matrix
         weights_here = zeros( 1, Ntot );
@@ -143,7 +143,11 @@ K = IDplusDLMat + M;
 
 % Solve for sigma, unknown density
 s = tic();
-sigma = K\rhs;
+if( nargout > 2 )
+    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, 100);
+else
+    sigma = gmres(K, rhs, [], 1e-14, 100);
+end
 t = toc(s);
 fprintf("%5.2e s :time taken to solve the linear system with Matlab's backslash\n", t);
 
@@ -208,7 +212,7 @@ if( plt )
 end
 
 
-if( nargout > 2 )
+if( nargout > 3 )
     % We also need zztarg, xxtarg, yytarg
     % Find points off surface
     rmin = min(ds.chnkrs);
