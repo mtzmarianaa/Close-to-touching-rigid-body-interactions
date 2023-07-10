@@ -1,10 +1,9 @@
 % Verification of green's identity for discs (one disc first)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
 clear all
 close all
-
+addpaths_loc();
 
 iseed = 166297;
 rng(iseed,'twister');

@@ -10,18 +10,19 @@ classdef discs
     properties(Access = public)
         ctrs % center of the discs
         Rs % radii of discs
-        listGammas % list of gammas, close to touching parts
+        listGammas % list chunker objects of gammas, close to touching parts
         chnkrsGammas % chunker object with the information of all gammas
         nGammas % number of gammas, close to touching parts
         listFarChunks % list of chunkers (length of nDiscs) with information of far curve pieces
         gamma0 % chunkr object with information about the far part
+        listChnkrs % list of chunkers with the information about the far and near curve pieces
         chnkrs % the chunker object with information from all discs
         nDiscs % number of discs
         nBreakPoints % number of breakpoints per disc
         infoClose % boolean, if information about close chunks is given or not
         I % if given, information about the chunks on each disc close to other discs
-        indGamma % if close to touching information given, this is the index where the close to touching part
-                         % starts in chnkrs (i.e. where K22 begins in K)
+        indGammas % if close to touching information given, this is the index where gamma_i starts
+        nB % limits for the K matrix
     end
 
     methods
@@ -108,8 +109,10 @@ classdef discs
             listGammas = [];
             nGammas = 0;
             I = [];
-            indGamma = 0;
+            indGammas = 0;
             chnkrsGammas = [];
+            listFarChunks = [];
+            gamma0 = [];
 
             % Settings for the geometry of the close to touching region of
             % the discs
@@ -154,35 +157,61 @@ classdef discs
                 indMissingClose = find(~chnkrsGammas.adj);
                 indMissingFar = find(~gamma0.adj);
                 % Merge
+                chnkrsGammas = merge(listGammas);
                 chnkrs = merge([gamma0, listGammas]);
                 chnkrs .adj(2*gamma0.nch + indMissingClose) = neisMapFar;
                 chnkrs.adj(indMissingFar) = gamma0.nch + neisMapClose;
-                
-                indGamma = gamma0.nch + 1;
+
+                % Add the indices where the gammas start and nB
+                indGammas = zeros(nGammas+2, 1);
+                indGammas(1) = 0;
+                indGammas(2) = gamma0.nch;
+                nB = zeros(nGammas + 2, 1);
+                nB(1) = 0;
+                nB(2) = gamma0.npt;
+                for i=3:(nGammas+2)
+                    indGammas(i) = indGammas(i-1) + listGammas(i-2).nch;
+                    nB(i) = nB(i-1) + listGammas(i-2).npt;
+                end
 
             end
 
             
             if( ~ infoClose)
                 % If we dont have close to touching parts
+                nB = zeros( nDiscs + 1, 1);
+                nB(1) = 0;
                 for i=1:nDiscs
                     breakpoints = linspace(0, 2*pi, nBreakPoints(i));
                     center = ctrs(:, i);
                     R = Rs(i);
                     listChnkrs(i) = chunkerfuncbreakpoints( @(t) disc(t, center = center, radius = R), ...
                         breakpoints, [], p );
+                    nB(i+1) = nB(i) + listChnkrs(i).npt;
                 end
                 chnkrs = merge(listChnkrs);
             end
 
             % Add these properties to the object
+            obj.ctrs = ctrs;
+            obj.Rs = Rs;
+            obj.nBreakPoints = nBreakPoints;
+            obj.infoClose = infoClose;
+            obj.chnkrsGammas = chnkrsGammas;
             obj.chnkrs = chnkrs;
             obj.listGammas = listGammas;
             obj.nGammas = nGammas;
             obj.listFarChunks = listFarChunks;
             obj.gamma0 = gamma0;
             obj.I = I;
-            obj.indGamma = indGamma;
+            obj.indGammas = indGammas;
+            obj.nB = nB;
+
+            if( infoClose )
+                listChnkrs = [gamma0, listGammas];
+            end
+
+            obj.listChnkrs = listChnkrs;
                          
 
         end

@@ -1,6 +1,6 @@
 % Test discs
 
-
+addpaths_loc();
 % 3 discs
 
 geom = [];
@@ -59,3 +59,9 @@ plot(chnkrs, '-.')
 axis equal
 title("Far and close sections of the curved combined")
 
+
+
+
+% Directly with the builder
+
+ds = discs(geom, pClose);
