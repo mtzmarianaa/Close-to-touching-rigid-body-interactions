@@ -1,7 +1,7 @@
 %%% Compare the errors as discs come together. Solve first capacitance,
 %%% then elastance and compare
 addpaths_loc();
-clear all
+%clear all
 close all
 clc
 
@@ -14,25 +14,33 @@ ctrs = [0 1.500000000001 ;0 0]; % Centers of the circles
 Rs = [0.75; 0.75]; % Radi of the circles
 n = length(uk);
 nBreakPoints = [10; 10];
-
-%%%%%%%%%%%%%%%%%%%%
-%%%% Uniform panels
-
 geom = [];
 geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 
 
+%%%%%%%%%%%%%%%%%%%%
+%%%% Adaptive
+
+pClose = [];
+pClose(1).data = [0 2 1];
+pClose(1).nClose = 1;
+pClose(1).thetasReg = pi/6;
+pClose(2).data = [pi, 1, 1];
+pClose(2).nClose =1;
+pClose(2).thetasReg = pi/6;
+
+
 xcoordCtr2 = linspace(1.500000000001, 1.65, nTest ); % Variation in the coordinate ctrs(1,2), moving the discs closer
 
-errors_uk = zeros( nTest, 1 );
+errors_ukAdaptive = zeros( nTest, 1 );
 nGMRES_capacitance = zeros( nTest, 1);
 nGMRES_elastance = zeros( nTest, 1 );
 
 for i=1:nTest
     ctrs(1,2) = xcoordCtr2(i);
     geom.ctrs = ctrs;
-    ds = discs(geom);
+    ds = discs(geom, pClose);
     % First solve capacitance
     [qkC, sigmaC, nGMRES_C] = capacitanceProblem(ds, uk);
     % Compute ukC
@@ -52,7 +60,7 @@ for i=1:nTest
     % Now with this q solve elastance
     [ukE, sigmaE, nGMRES_E] = elastanceProblem(ds, qkC);
     % Compute the difference
-    errors_uk(i) = norm(ukC - ukE)/norm(ukC);
+    errors_ukAdaptive(i) = norm(ukC - ukE)/norm(ukC);
     % Add the number of iterations needed
     nGMRES_capacitance(i) = nGMRES_C(2);
     nGMRES_elastance(i) = nGMRES_E(2);
@@ -66,13 +74,13 @@ cO = [147/255 155/255 255/255];
 cS = [155/255 0 255/255];
 
 figure()
-plot(xcoordCtr2-1.5, errors_uk, '-o', 'Color', cq)
+plot(xcoordCtr2-1.5, errors_ukAdaptive, '-o', 'Color', cq)
 title("Errors on surface density")
 xlabel("Distance between discs")
 ylabel("Relative error (l2)")
 
 figure()
-loglog(xcoordCtr2-1.5, errors_uk, '-o', 'Color', cq)
+loglog(xcoordCtr2-1.5, errors_ukAdaptive, '-o', 'Color', cq)
 title("Errors on surface density (log log)")
 xlabel("Distance between discs")
 ylabel("Relative error (l2)")
@@ -90,11 +98,6 @@ plot(xcoordCtr2-1.5, nGMRES_elastance, '-*', 'Color', cS)
 title("Number of GMRES iterations needed - Elastance")
 xlabel("Distance between discs")
 ylabel("GMRES iterations needed")
-
-
-
-
-
 
 
 

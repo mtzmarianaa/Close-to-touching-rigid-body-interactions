@@ -106,7 +106,7 @@ s = tic();
 if( nargout > 2 )
     [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, 100);
 else
-    sigma = gmres(K, rhs, [], 1e-14, 100);
+    sigma = gmres(K, rhs, [], 1e-14, 1000);
 end
 t2 = toc(s);
 fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t2);

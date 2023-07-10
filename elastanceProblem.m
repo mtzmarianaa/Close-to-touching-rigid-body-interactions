@@ -144,12 +144,12 @@ K = IDplusDLMat + M;
 % Solve for sigma, unknown density
 s = tic();
 if( nargout > 2 )
-    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, 100);
+    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, 1000);
 else
     sigma = gmres(K, rhs, [], 1e-14, 100);
 end
 t = toc(s);
-fprintf("%5.2e s :time taken to solve the linear system with Matlab's backslash\n", t);
+fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t);
 
 
 % Compute u for on surface points
