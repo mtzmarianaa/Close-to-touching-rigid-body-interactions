@@ -18,48 +18,6 @@ pClose(3).data = [3*pi/2 1 2];
 pClose(3).nClose = 1;
 pClose(3).thetasReg = pi/6;
 
-nDiscs = 3;
-
-% Build the necessary things
-
-
-[I, nGammas, pClose] = dsc.buildI(pClose, nDiscs);
-[listGammas, neisMapClose] = dsc.buildGammas(geom, pClose, I, nDiscs);
-chnkrsGammas = merge(listGammas);
-[gamma0, neisMapFar, listFarChunks] = dsc.buildGamma0(geom, pClose, I, nDiscs);
-
-% Add the missing neis
-indMissingClose = find(~chnkrsGammas.adj);
-indMissingFar = find(~gamma0.adj);
-% Merge
-chnkrs = merge([gamma0, listGammas]);
-chnkrs .adj(2*gamma0.nch + indMissingClose) = neisMapFar;
-chnkrs.adj(indMissingFar) = gamma0.nch + neisMapClose;
-
-indGamma = gamma0.nch + 1;
-
-
-
-% Plot things
-figure()
-plot(gamma0, '-o')
-axis equal
-title("Far section of the curve")
-
-
-figure()
-plot(chnkrsGammas, '-*')
-axis equal
-title("Near section of the curve")
-
-
-
-figure()
-plot(chnkrs, '-.')
-axis equal
-title("Far and close sections of the curved combined")
-
-
 
 
 % Directly with the builder

@@ -11,6 +11,7 @@ classdef discs
         ctrs % center of the discs
         Rs % radii of discs
         listGammas % list chunker objects of gammas, close to touching parts
+        listCoarseGammas % list chunker objects of gammas in the coarse discretization
         chnkrsGammas % chunker object with the information of all gammas
         nGammas % number of gammas, close to touching parts
         listFarChunks % list of chunkers (length of nDiscs) with information of far curve pieces
@@ -21,6 +22,7 @@ classdef discs
         nBreakPoints % number of breakpoints per disc
         infoClose % boolean, if information about close chunks is given or not
         I % if given, information about the chunks on each disc close to other discs
+        I_closeReg % theta such that t +- theta defines the close region for each gamma in I
         indGammas % if close to touching information given, this is the index where gamma_i starts
         nB % limits for the K matrix
     end
@@ -90,7 +92,6 @@ classdef discs
             obj.nDiscs = nDiscs;
             Rs = 0.75*ones(1, nDiscs); % all discs with same radii = 0.75 (NEVER USE 1)
             nBreakPoints = 10*ones(1, nDiscs);
-            thetas = []; % Here is where we are going to save (or not) the parametrization thetas
 
             if isfield(geom, 'Rs')
                 % No field for radii, standard option
@@ -107,12 +108,14 @@ classdef discs
             end
 
             listGammas = [];
+            listCoarseGammas = [];
             nGammas = 0;
             I = [];
             indGammas = 0;
             chnkrsGammas = [];
             listFarChunks = [];
             gamma0 = [];
+            I_closeReg= [];
 
             % Settings for the geometry of the close to touching region of
             % the discs
@@ -147,7 +150,7 @@ classdef discs
 
                 % Build list for gammas, close to touching interactiong and
                 % the map for the neighbors
-                [listGammas, neisMapClose] = dsc.buildGammas(geom, pClose, I, nDiscs);
+                [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = dsc.buildGammas(geom, pClose, I, nDiscs);
                 chnkrsGammas = merge(listGammas);
 
                 % Build gamma0, neisMapFar, listFarChunks
@@ -200,12 +203,14 @@ classdef discs
             obj.chnkrsGammas = chnkrsGammas;
             obj.chnkrs = chnkrs;
             obj.listGammas = listGammas;
+            obj.listCoarseGammas = listCoarseGammas;
             obj.nGammas = nGammas;
             obj.listFarChunks = listFarChunks;
             obj.gamma0 = gamma0;
             obj.I = I;
             obj.indGammas = indGammas;
             obj.nB = nB;
+            obj.I_closeReg = I_closeReg;
 
             if( infoClose )
                 listChnkrs = [gamma0, listGammas];

@@ -1,4 +1,4 @@
-function [listGammas, neisMapClose] = buildGammas(geom, pClose, I, nDiscs)
+function [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = buildGammas(geom, pClose, I, nDiscs)
 % Builds the list of gammas, the close to touching part. Also build
 % neisMapClose, the map for the neighbors. Not user friendly
 
@@ -9,7 +9,9 @@ cparams.tb = 4*pi;
 
 nGammas = size(I, 1); % Number of close to touching parts
 listGammas(1, nGammas) = chunker(); % Initialize the list of chunker objects
+listCoarseGammas(1, nGammas) = chunker(); % Initialize the list of coarse chunker objects
 neisMapClose = []; % Initialize struct
+I_closeReg = zeros(nGammas, 2);
 
 nchold = 0; % Initialize off set
 neisClose = [];
@@ -29,6 +31,7 @@ for r=1:nGammas
     i = I(r, 1);
     currentInd_i = neisClose(i).currentInd;
     thetaReg_i = pClose(i).thetasReg(currentInd_i);
+    I_closeReg(r, 1) = thetaReg_i;
     R_i = geom.Rs(i);
     ctr_i = geom.ctrs(:, i);
     theta_ji = I(r, 2);
@@ -36,6 +39,7 @@ for r=1:nGammas
     s = I(r, 3);
     currentInd_s = neisClose(s).currentInd;
     thetaReg_s = pClose(s).thetasReg(currentInd_s);
+    I_closeReg(r, 2) = thetaReg_s;
     R_s = geom.Rs(s);
     ctr_s = geom.ctrs(:, s);
     theta_ks = I(r, 4);
@@ -49,6 +53,7 @@ for r=1:nGammas
     plusReg_i = fanReg(alpha_0i, theta_ji); % breakpoints
     d_i = @(t) disc(t, center = ctr_i, radius = R_i);
     chnkr_gamma_r1 = chunkerfuncbreakpoints( d_i, plusReg_i, cparams, pref, false );
+    chunkr_coarse_r1 = chunkerfuncbreakpoints( d_i, [plusReg_i(1), plusReg_i(end)], cparams, pref, false );
     %plusReg_i = mod(plusReg_i, 2*pi);
     startPoint_i = plusReg_i(1, 1);
     nStart_i = 1 + nchold;
@@ -69,6 +74,7 @@ for r=1:nGammas
     plusReg_s = fanReg(alpha_0s, theta_ks); % breakpoints
     d_s = @(t) disc(t, center = ctr_s, radius = R_s);
     chnkr_gamma_r2 = chunkerfuncbreakpoints( d_s, plusReg_s, cparams, pref, false );
+    chunkr_coarse_r2 = chunkerfuncbreakpoints( d_s, [plusReg_s(1), plusReg_s(end)], cparams, pref, false );
     %plusReg_s = mod(plusReg_s, 2*pi);
     startPoint_s = plusReg_s(1, 1);
     nStart_s = 1 + nchold;
@@ -84,6 +90,7 @@ for r=1:nGammas
 
     % Merge the two parts of gamma_r, add them to the list
     listGammas(1, r) = merge( [chnkr_gamma_r1, chnkr_gamma_r2] );
+    listCoarseGammas(1, r) = merge( [chunkr_coarse_r1, chunkr_coarse_r2]  );
 
 end
 
