@@ -41,6 +41,8 @@ nB = ds.nB;
 SL_kern = @(s,t) chnk.lap2d.kern(s, t, 's');
 DL_kern = @(s,t) chnk.lap2d.kern(s, t, 'd');
 DLplusSL = @(s,t) DL_kern(s,t) + SL_kern(s,t);
+ID_kern = @(s,t)  speye(size(t.r, 2)*size(t.r, 3), size(s.r, 2) *size(s.r, 3));
+DLplusSLplusHI = @(s,t) 0.5*ID_kern(s,t) + DLplusSL;
 
 
 %%%%%%%%%%%
