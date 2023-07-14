@@ -91,7 +91,7 @@ Kc = bigEye + Kc*block_R;
 % Solve the linear system using GMRES
 
 s = tic();
-[sigmaPrecondComp, nGMRES] = gmres( Kc, rhsC, [], 1e-14 );
+[sigmaPrecondComp, nGMRES] = gmres( Kc, rhsC, [], 1e-14, 1500 );
 t2 = toc(s);
 fprintf("%5.2e s :time taken to solve the compressed precond linear system with GMRES\n", t2);
 

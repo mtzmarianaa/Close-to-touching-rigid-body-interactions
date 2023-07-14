@@ -46,6 +46,7 @@ for r=1:nGammas
 
     % Compute distance, alpha_0
     dist = dist_is(ctr_i, R_i, theta_ji, ctr_s, R_s, theta_ks);
+    dist = sqrt(dist); % Should be the square root of the distance between the two discs
     
     % Start building the part of gamma_r from Di, add information to
     % neisClose(i)
@@ -53,7 +54,9 @@ for r=1:nGammas
     plusReg_i = fanReg(alpha_0i, theta_ji); % breakpoints
     d_i = @(t) disc(t, center = ctr_i, radius = R_i);
     chnkr_gamma_r1 = chunkerfuncbreakpoints( d_i, plusReg_i, cparams, pref, false );
-    chunkr_coarse_r1 = chunkerfuncbreakpoints( d_i, [plusReg_i(1), plusReg_i(end)], cparams, pref, false );
+    breakPointsCoarse_i = [ plusReg_i(1), ( plusReg_i(1) + theta_ji )/2, theta_ji, ...
+         ( plusReg_i(end) + theta_ji )/2, plusReg_i(end)];
+    chunkr_coarse_r1 = chunkerfuncbreakpoints( d_i, breakPointsCoarse_i, cparams, pref, false );
     %plusReg_i = mod(plusReg_i, 2*pi);
     startPoint_i = plusReg_i(1, 1);
     nStart_i = 1 + nchold;
@@ -74,7 +77,9 @@ for r=1:nGammas
     plusReg_s = fanReg(alpha_0s, theta_ks); % breakpoints
     d_s = @(t) disc(t, center = ctr_s, radius = R_s);
     chnkr_gamma_r2 = chunkerfuncbreakpoints( d_s, plusReg_s, cparams, pref, false );
-    chunkr_coarse_r2 = chunkerfuncbreakpoints( d_s, [plusReg_s(1), plusReg_s(end)], cparams, pref, false );
+    breakPointsCoarse_s = [ plusReg_s(1), ( plusReg_s(1) + theta_ks )/2, theta_ks, ...
+         ( plusReg_s(end) + theta_ks )/2, plusReg_s(end)];
+    chunkr_coarse_r2 = chunkerfuncbreakpoints( d_s, breakPointsCoarse_s, cparams, pref, false );
     %plusReg_s = mod(plusReg_s, 2*pi);
     startPoint_s = plusReg_s(1, 1);
     nStart_s = 1 + nchold;

@@ -9,6 +9,8 @@ nChunkers = length(ds.listChnkrs);
 
 K_full = zeros(Ntot);
 opts = [];
+opts2 = [];
+opts2.adaptive_correction = true;
 
 if( nargout < 2 )
     % Just build the full K matrix, don't store or compute inverses
@@ -26,7 +28,7 @@ if( nargout < 2 )
             % See if we have to do an off boundary or on boundary eval
             if(i == k)
                 % on boundary
-                submat = chunkermat(chnkri, kernel);
+                submat = chunkermat(chnkri, kernel, opts2);
             else
                 % off boundary
                 submat = chunkerkernevalmat(chnkri, kernel, targ, opts);

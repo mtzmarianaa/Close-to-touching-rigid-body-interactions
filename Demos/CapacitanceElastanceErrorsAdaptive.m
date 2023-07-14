@@ -10,10 +10,10 @@ u2 = @(x) 1+0*x(1, :);
 nTest = 50;
 
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
-ctrs = [0 1.500000000001 ;0 0]; % Centers of the circles
+ctrs = [0 1.5 ;0 0]; % Centers of the circles
 Rs = [0.75; 0.75]; % Radi of the circles
 n = length(uk);
-nBreakPoints = [10; 10];
+nBreakPoints = [12; 12];
 geom = [];
 geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
@@ -31,7 +31,10 @@ pClose(2).nClose =1;
 pClose(2).thetasReg = pi/6;
 
 
-xcoordCtr2 = linspace(1.500000000001, 1.65, nTest ); % Variation in the coordinate ctrs(1,2), moving the discs closer
+%xcoordCtr2 = linspace(1.500000000001, 1.65, nTest ); % Variation in the coordinate ctrs(1,2), moving the discs closer
+xcoordCtr2 = 1.5 + [ 1e-3 1e-4 1e-5 1e-6 1e-7  ];
+nTest = 5;
+
 
 errors_ukAdaptive = zeros( nTest, 1 );
 nGMRES_capacitance = zeros( nTest, 1);
@@ -41,6 +44,10 @@ for i=1:nTest
     ctrs(1,2) = xcoordCtr2(i);
     geom.ctrs = ctrs;
     ds = discs(geom, pClose);
+%     figure()
+%     plot(ds.listChnkrs(:), 'o')
+%     axis equal
+    ds.listGammas(1).nch
     % First solve capacitance
     [qkC, sigmaC, nGMRES_C] = capacitanceProblem(ds, uk);
     % Compute ukC

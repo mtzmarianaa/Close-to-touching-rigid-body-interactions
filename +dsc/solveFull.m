@@ -6,7 +6,7 @@ function [sigmaFull, nGMRES] = solveFull( ds, rhs, kernel )
 K_full = dsc.buildFullK(ds, kernel);
 
 s = tic();
-[sigmaFull, nGMRES] = gmres(K_full, rhs, [], 1e-14);
+[sigmaFull, nGMRES] = gmres(K_full, rhs, [], 1e-14, 1500);
 t2 = toc(s);
 
 fprintf("%5.2e s :time taken to solve the full linear system with GMRES\n", t2);

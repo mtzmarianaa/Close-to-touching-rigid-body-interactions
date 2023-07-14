@@ -56,6 +56,8 @@ DLplusSLplusHI = @(s,t) 0.5*ID_kern(s,t) + DLplusSL;
 % Initialize the matrix
 K = zeros(Ntot);
 opts = [];
+opts2 = [];
+opts2.adaptive_correction = true;
 
 
 % Proceed to fill in the matrix 
@@ -74,7 +76,7 @@ for k=1:nChunkers
         % See if we have to do an off boundary or on boundary eval
         if(i == k)
             % on boundary
-            submat = chunkermat(chnkri, DLplusSL) + 0.5*eye(nRow);
+            submat = chunkermat(chnkri, DLplusSL, opts2) + 0.5*eye(nRow);
         else
             % off boundary
             submat = chunkerkernevalmat(chnkri, DLplusSL, targ, opts);
@@ -106,9 +108,9 @@ end
 % Solve for sigma, the unknown density
 s = tic();
 if( nargout > 2 )
-    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, 100);
+    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14);
 else
-    sigma = gmres(K, rhs, [], 1e-14, 1000);
+    sigma = gmres(K, rhs, [], 1e-14, 1500);
 end
 t2 = toc(s);
 fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t2);
