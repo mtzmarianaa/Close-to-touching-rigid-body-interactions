@@ -1,4 +1,4 @@
-function P = prol_dyadic( x, nRef )
+function P = prol_dyadic( xCoarse, x, nRef )
 % Given x ( n Gauss-Legendre nodes on [-1, 1]) we build the prolongation
 % matrix that interpolates data from this discretization to a finer one. 
 % This finer discretization was done using nRef dyadic refinements of the
@@ -28,7 +28,7 @@ x_fine( ((nRef-1 )*n + 1):((nRef +1 )*n) ) = [ -flip(shifted); shifted ];
 
 
 % Build the Vandermonde matrices
-C = rcip.shortVandermonde(x, n);
+C = rcip.shortVandermonde(xCoarse, n);
 F = rcip.shortVandermonde(x_fine, n);
 
 P = F/C;

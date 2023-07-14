@@ -108,9 +108,9 @@ end
 % Solve for sigma, the unknown density
 s = tic();
 if( nargout > 2 )
-    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14);
+    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, size(K,1));
 else
-    sigma = gmres(K, rhs, [], 1e-14, 1500);
+    sigma = gmres(K, rhs, [], 1e-14, size(K,1));
 end
 t2 = toc(s);
 fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t2);

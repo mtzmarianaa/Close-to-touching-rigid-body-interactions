@@ -23,7 +23,10 @@ geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 
 
-xcoordCtr2 = linspace(1.500000000001, 1.65, nTest ); % Variation in the coordinate ctrs(1,2), moving the discs closer
+%xcoordCtr2 = linspace(1.500000000001, 1.65, nTest ); % Variation in the coordinate ctrs(1,2), moving the discs closer
+xcoordCtr2 = 1.5 + [ 1e-3 1e-4 1e-5 1e-6 1e-7  ];
+nTest = 5;
+
 
 errors_uk = zeros( nTest, 1 );
 nGMRES_capacitance = zeros( nTest, 1);
