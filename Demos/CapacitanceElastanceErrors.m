@@ -23,9 +23,8 @@ geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 
 
-%xcoordCtr2 = linspace(1.500000000001, 1.65, nTest ); % Variation in the coordinate ctrs(1,2), moving the discs closer
-xcoordCtr2 = 1.5 + [ 1e-3 1e-4 1e-5 1e-6 1e-7  ];
-nTest = 5;
+xcoordCtr2 = 1.5 + [ 1e-1 1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8  ];
+nTest = length(xcoordCtr2);
 
 
 errors_uk = zeros( nTest, 1 );
@@ -57,8 +56,8 @@ for i=1:nTest
     % Compute the difference
     errors_uk(i) = norm(ukC - ukE)/norm(ukC);
     % Add the number of iterations needed
-    nGMRES_capacitance(i) = nGMRES_C(2);
-    nGMRES_elastance(i) = nGMRES_E(2);
+    nGMRES_capacitance(i) = nGMRES_C;
+    nGMRES_elastance(i) = nGMRES_E;
 end
 
 
