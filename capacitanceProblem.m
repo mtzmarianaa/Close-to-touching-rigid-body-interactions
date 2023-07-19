@@ -1,20 +1,29 @@
-function [q, sigma, nGMRES, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, plt, outopt)
+function [q, sigma, nGMRES, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, plt, outopt)
 % Given the description of the geometry of nCircles solve the capacitance
 % problem. 
 % IN: ds : a discs object with the given geometry of the discs
 %        uk:  u defined at the boundary
-%        plot: boolean, wheather to plot or not
+%        solveType: 'full' solves the full system, 'precond' solves the
+%                         precond full system, 'precondcomp' solves the precond compressed
+%                         system
+%        plt: boolean, wheather to plot or not
 % OUT:  q: charges on the n given discs
 %           sigma: on bundary density
 
-if( nargin < 3 )
+if(nargin < 3)
+    solveType = 'full';
+end
+solveType = lower(solveType);
+
+if( nargin < 4 )
     plt = false;
 end
-if( nargin < 4 )
+if( nargin < 5 )
     outopt = [];
     outopt.fact = 3;
     outopt.nplot = 250;
 end
+
 
 if ~isfield(outopt, 'fact')
     outopt.fact = 3;
@@ -27,93 +36,34 @@ end
 
 
 n = length(uk);
-nChunkers = length(ds.listChnkrs);
 ctrs = ds.ctrs;
-Rs = ds.Rs;
-nBreakPoints = ds.nBreakPoints;
 
+kern = @(s,t) krns.DLplusSL(s,t);
+matOffSet = 0.5*eye(ds.chnkrs.npt);
 
-Ntot = ds.chnkrs.npt;
-nB = ds.nB;
-
-
-% BUILD THE KERNEL FUNCTIONS
-SL_kern = @(s,t) chnk.lap2d.kern(s, t, 's');
-DL_kern = @(s,t) chnk.lap2d.kern(s, t, 'd');
-DLplusSL = @(s,t) DL_kern(s,t) + SL_kern(s,t);
-ID_kern = @(s,t)  speye(size(t.r, 2)*size(t.r, 3), size(s.r, 2) *size(s.r, 3));
-DLplusSLplusHI = @(s,t) 0.5*ID_kern(s,t) + DLplusSL;
-
-
-%%%%%%%%%%%
-%%%%%% OPTION A: BUILD THE MATRIX DIRECTLY WITH CHUNKERMAT
-% Build the matrix
-% K = chunkermat( ds.chnkrs, DLplusSL);
-% K = K + 0.5*eye(size(K));
-
-
-%%%%%%%%% OPTION B: BUILD THE MATRIX BLOCK BY BLOCK
-% Initialize the matrix
-K = zeros(Ntot);
-opts = [];
-opts2 = [];
-opts2.adaptive_correction = true;
-
-
-% Proceed to fill in the matrix 
-for k=1:nChunkers
-    % fill column by column
-    nCol = nB(k + 1) - nB(k); % Number of columns for the submatrices
-    chnkrk = ds.listChnkrs(k);
-    targ = reshape(chnkrk.r, 2 , chnkrk.k*chnkrk.nch);
-    start_col = nB(k) + 1;
-    end_col = nB(k+1);
-    for i=1:nChunkers
-        nRow = nB(i + 1) - nB(i); % Number of rows for the submatrix
-        start_row = nB(i) + 1;
-        end_row = nB(i + 1);
-        chnkri = ds.listChnkrs(i); % chunker we are working with
-        % See if we have to do an off boundary or on boundary eval
-        if(i == k)
-            % on boundary
-            submat = chunkermat(chnkri, DLplusSL, opts2) + 0.5*eye(nRow);
-        else
-            % off boundary
-            submat = chunkerkernevalmat(chnkri, DLplusSL, targ, opts);
-        end
-        % Add this submatrix to K
-        K(start_col:end_col, start_row:end_row) = submat;
-    end
-end
-
-
-
-
-% Fill the RHS
-rhs = zeros(Ntot, 1);
-for i = 1:n 
-    % Use the flag
-    flag = logical( dsc.flagnDisc(i, ds) );
-    % Convert that to points
-    flag_points = repmat(flag, 1, ds.chnkrs.k);
-    flag_points = flag_points';
-    flag_points = logical( flag_points(:) );
-    % Get the points
-    xOnSurface = reshape(ds.chnkrs.r(:, :, flag ), 2, []);
-    u_toUse = uk{i}(xOnSurface);
-    rhs(flag_points) = u_toUse';
-end
-
-
-% Solve for sigma, the unknown density
-s = tic();
-if( nargout > 2 )
-    [sigma, ~, ~, nGMRES] = gmres(K, rhs, [], 1e-14, size(K,1));
+% Build according to preferences
+if strcmp(solveType, 'full') || strcmp(solveType, 'precond')
+    % Build the rhs
+    flagFunction = @(k, ds) dsc.flagnDisc(k, ds);
+    rhs = buildRHS_capacitance(ds, ds.listChnkrs, ds.nB, flagFunction, uk);
+    
 else
-    sigma = gmres(K, rhs, [], 1e-14, size(K,1));
+    % Build the rhs
+    flagFunction = @(k, ds) dsc.flagnDiscCoarse(k, ds);
+    rhs = buildRHS_capacitance(ds, [ds.gamma0, ds.listCoarseGammas], ds.nBCoarse, flagFunction, uk);
+    
+    % Solve the system
+    matOffSetCoarse = 0.5*eye(ds.nBCoarse(end));
 end
-t2 = toc(s);
-fprintf("%5.2e s :time taken to solve the linear system with GMRES\n", t2);
+
+% Solve according to preferences
+if strcmp(solveType, 'full')
+    [sigma, nGMRES] = dsc.solveFull(ds, rhs, kern, matOffSet);
+elseif strcmp(solveType, 'precond')
+    [sigma, nGMRES] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
+else
+    [sigma, nGMRES] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
+end
 
 
 % Compute the boundary integral of sigma over the discs to find q

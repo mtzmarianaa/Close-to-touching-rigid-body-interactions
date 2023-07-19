@@ -1,6 +1,7 @@
 function [flag] = flagnDisc(i, ds)
 % Given a discs object outputs a sparse boolean vector such that 
-% it indicates which chunk on ds is on the i-th disc
+% it indicates which chunk on ds is on the i-th disc. For the fine
+% discretization
 
 assert( i <= ds.nDiscs, 'Not enough discs on ds for this request' )
 

@@ -1,6 +1,10 @@
-function [K_full,  listKs_inv]= buildFullK(ds, kernel)
+function [K_full,  listKs_inv]= buildFullK(ds, kernel,  matOffSet)
 % Build the full matrix for a BIE using kernel as a kernel.
 % K_full = [K11 K12; K21 K22]
+
+if( nargin < 3)
+    matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
+end
 
 
 Ntot = ds.chnkrs.npt;
@@ -39,6 +43,7 @@ if( nargout < 2 )
     end   
 end
 
+
 if( nargout == 2 )
     % Compute the full matrix AND store the inverses
     listKs_inv = cell(1, ds.nGammas); % Initialize cell array
@@ -56,9 +61,9 @@ if( nargout == 2 )
             % See if we have to do an off boundary or on boundary eval
             if(i == k)
                 % on boundary
-                submat = chunkermat(chnkri, kernel);
+                submat = chunkermat(chnkri, kernel, opts2);
                 if( i > 1)
-                    listKs_inv{i-1} = inv(submat); % Save this inverse (it's on the diagonal)
+                    listKs_inv{i-1} = inv(submat + matOffSet(start_col:end_col, start_row:end_row)); % Save this inverse (it's on the diagonal)
                 end
             else
                 % off boundary
@@ -70,5 +75,6 @@ if( nargout == 2 )
     end 
 end
 
+K_full = K_full + matOffSet;
 
 end

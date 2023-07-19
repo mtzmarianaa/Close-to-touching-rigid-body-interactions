@@ -1,6 +1,6 @@
 %%% Compare the errors as discs come together. Solve first capacitance,
 %%% then elastance and compare
-% FULL SYSTEM SOLVE
+% FULL  BLOCK PRECONDITIONED SYSTEM SOLVE
 addpaths_loc();
 clear all
 close all
@@ -9,7 +9,7 @@ clc
 u1 = @(x) 0*x(1, :);
 u2 = @(x) 1+0*x(1, :);
 
-solveType = 'full';
+solveType = 'precond';
 
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
 ctrs = [0 1.5 ;0 0]; % Centers of the circles
@@ -81,48 +81,47 @@ cS = [155/255 0 255/255];
 
 figure()
 plot(xcoordCtr2-1.5, errors_ukAdaptive, '-o', 'Color', cq)
-title("Errors on surface density - Full")
+title("Errors on surface density - Block Preconditioner")
 xlabel("Distance between discs")
 ylabel("Relative error (l2)")
 
 figure()
 loglog(xcoordCtr2-1.5, errors_ukAdaptive, '-o', 'Color', cq)
-title("Errors on surface density (log log) - Full")
+title("Errors on surface density (log log) - Block Preconditioner")
 xlabel("Distance between discs")
 ylabel("Relative error (l2)")
 
 figure()
 loglog(depth, errors_ukAdaptive, '-o', 'Color', cq)
-title("Errors on surface density (log log) - Full")
+title("Errors on surface density (log log) - Block Preconditioner")
 xlabel("Depth of refinement")
 ylabel("Relative error (l2)")
 
 
 figure()
 plot(xcoordCtr2-1.5, nGMRES_capacitance, '-*', 'Color', cO)
-title("Number of GMRES iterations needed - Capacitance - Full")
+title("Number of GMRES iterations needed - Capacitance - Block Preconditioner")
 xlabel("Distance between discs")
 ylabel("GMRES iterations needed")
 
 figure()
 plot(depth, nGMRES_capacitance, '-*', 'Color', cO)
-title("Number of GMRES iterations needed - Capacitance - Full")
+title("Number of GMRES iterations needed - Capacitance - Block Preconditioner")
 xlabel("Depth of refinement")
 ylabel("GMRES iterations needed")
 
 
 figure()
 plot(xcoordCtr2-1.5, nGMRES_elastance, '-*', 'Color', cS)
-title("Number of GMRES iterations needed - Elastance - Full")
+title("Number of GMRES iterations needed - Elastance - Block Preconditioner")
 xlabel("Distance between discs")
 ylabel("GMRES iterations needed")
 
 
 figure()
 plot(depth, nGMRES_elastance, '-*', 'Color', cS)
-title("Number of GMRES iterations needed - Elastance - Full")
+title("Number of GMRES iterations needed - Elastance - Block Preconditioner")
 xlabel("Depth of refinement")
 ylabel("GMRES iterations needed")
-
 
 

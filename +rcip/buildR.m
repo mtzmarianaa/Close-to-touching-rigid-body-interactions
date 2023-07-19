@@ -14,12 +14,11 @@ Wf = spdiags(Wf);
 nf = chunkerFine.npt;
 Wf = speye(nf).*Wf;
 
-nRef = floor( chunkerFine.nch/2 );
-x = lege.exps( chunkerCoarse.k );
+nRef = floor( chunkerFine.nch/4 - 2  );
 
 if(nargin < 5)
-    P = rcip.prol_dyadic(x, nRef);
-    P = [P P];
+    P = rcip.prol_dyadic(chunkerCoarse.k, nRef);
+    P = blkdiag(P, P);
 end
 
 if(nargin < 4)

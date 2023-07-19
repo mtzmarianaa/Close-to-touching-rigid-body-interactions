@@ -1,37 +1,42 @@
-function [sigmaPrecondComp, nGMRES] = solvePrecondComp( ds, rhsC, kernel, listKs_inv, listP, listR )
+function [sigmaPrecondComp, nGMRES] = solvePrecondComp( ds, rhsC, kernel, matOffSet, matOffSetCoarse, listKs_inv, listP, listR )
 % Solve the BIE for K*sigma = rhs FULLY, with preconditioning AND compressing
 % Also outputs the number of GMRES iterations needed to solve the problem
+
+% Options for on boundary evaluations
+opts2 = [];
+opts2.adaptive_correction = true;
 
 nGammas = ds.nGammas;
 nChunkers = length(ds.listChnkrs); % Total number of chunks
 opts = []; % Options for building off diagonal matrices with chunkie
 
 % Build nBc, nB for the compressed blocks
-nBc = zeros(nGammas + 2, 1);
-nBc(1) = 0;
-nBc(2) = ds.gamma0.npt;
-for i=3:(nGammas+2)
-    nBc(i) = nBc(i-1) + ds.listCoarseGammas(i-2).npt;
+nBc = ds.nBCoarse;
+nB = ds.nB;
+
+if( nargin < 5)
+    matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
+    matOffSetCoarse = sparse( ds.nBCoarse(end), ds.nBCoarse(end) );
 end
 
 % Build the inverses and the R matrices if needed
-if( nargin < 4 )
+if( nargin < 6 )
     listKs_inv = cell(1, ds.nGammas);
     listP = cell(1, ds.nGammas);
     listR = cell(1, ds.nGammas);
     for i =1:nGammas
-        K22_inv = inv(  chunkermat(ds.listGammas(i), kernel) );
+        K22 = chunkermat(ds.listGammas(i), kernel, opts2);
+        K22_inv = inv(  K22 + matOffSet( (nB(i+1)+1):nB(i+2),  (nB(i+1)+1):nB(i+2) ) );
         listKs_inv{i} = K22_inv;
-        x = lege.exps( ds.listCoarseGammas(i).k );
-        nRef = floor(ds.listGammas(i).nch/2);
-        Ph = rcip.prol_dyadic(x, nRef);
-        P = [Ph Ph];
+        nRef = floor(ds.listGammas(i).nch/4 - 2);
+        P = rcip.prol_dyadic(ds.listCoarseGammas(i).k, nRef);
+        P = blkdiag(P, P);
         listP{i} = P;
         listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), kernel, K22_inv, P);
     end
 end
 
-if( nargin < 6 )
+if( nargin < 8 )
     listR = cell(1, ds.nGammas);
         for i =1:nGammas
             listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), kernel, listKs_inv{i}, listP{i});
@@ -52,15 +57,17 @@ block_R = blkdiag(I0, listR{:});
 Kc = zeros( NtotC );
 
 % First block
-Kc(1:nBc(1), 1:nBc(1)) = chunkermat( ds.gamma0, kernel ) + eye(nBc(1));
+K11 = chunkermat( ds.gamma0, kernel, opts2) + matOffSet(1:nB(2), 1:nB(2));
+K11 = K11 - eye(size(K11));
+Kc(1:nB(2), 1:nB(2)) = K11;
 % Build the first row and column of the Kc matrix
 for i=2:nChunkers
     targ = reshape( ds.listCoarseGammas(i-1).r, 2, []);
     rowBlock = chunkerkernevalmat( ds.gamma0, kernel, targ, opts  );
-    Kc( 1:nBc(1), (nBc(i)+1):nBc(i) ) = rowBlock;
+    Kc(  (nBc(i)+1):nBc(i+1), 1:nB(2)  ) = rowBlock + matOffSetCoarse(  (nBc(i)+1):nBc(i+1), 1:nB(2)  );
     targGamma0 = reshape( ds.gamma0.r, 2, [] );
     columnBlock = chunkerkernevalmat( ds.listCoarseGammas(i-1), kernel, targGamma0, opts );
-    Kc( (nBc(i)+1):nBc(i), 1:nBc(1)  ) = columnBlock;
+    Kc( 1:nB(2), (nBc(i)+1):nBc(i+1) ) = columnBlock + matOffSetCoarse( 1:nB(2), (nBc(i)+1):nBc(i+1) );
 end
 
 % Build the second block - the one with blocks of zeros on the diagonal
@@ -68,32 +75,41 @@ for k=1:nGammas
     % fill column by column
     chnkrk = ds.listCoarseGammas(k);
     targ = reshape(chnkrk.r, 2 , chnkrk.k*chnkrk.nch);
-    start_col = nB(k) + 1;
-    end_col = nB(k+1);
+    start_col = nB(k+1) + 1;
+    end_col = nB(k+2);
     for i=1:nGammas
-        start_row = nB(i) + 1;
-        end_row = nB(i + 1);
+        start_row = nB(i+1) + 1;
+        end_row = nB(i + 2);
         chnkri = ds.listCoarseGammas(i); % chunker we are working with
         % See if we have to do an off boundary or on boundary eval
         if(i ~= k)
             % off boundary, else its just zeros and we don't need to
             % compute anything
-            Kc(start_col:end_col, start_row:end_row) = chunkerkernevalmat(chnkri, kernel, targ, opts);
+            Keval = chunkerkernevalmat(chnkri, kernel, targ, opts);
+            Kc(start_col:end_col, start_row:end_row) = Keval + matOffSetCoarse(start_col:end_col, start_row:end_row);
         end
     end
 end   
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 % Put the 3 matrices together
-
+Kc = Kc;
 Kc = bigEye + Kc*block_R;
 
 % Solve the linear system using GMRES
 
 s = tic();
-[sigmaPrecondComp, nGMRES] = gmres( Kc, rhsC, [], 1e-14, 1500 );
+[sigmaPrecondComp, ~, ~, nGMRES] = gmres( Kc, rhsC, [], 1e-10, size(Kc,1) );
 t2 = toc(s);
 fprintf("%5.2e s :time taken to solve the compressed precond linear system with GMRES\n", t2);
+nGMRES = nGMRES(2);
+
+% Get sigma in the fine discretization
+
+bigP = blkdiag( I0, listP{:} );
+blockInv = blkdiag(I0, listKs_inv{:});
+
+sigmaPrecondComp = blockInv*bigP*sigmaPrecondComp;
 
 
 end

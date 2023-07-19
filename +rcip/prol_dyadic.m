@@ -1,38 +1,102 @@
-function P = prol_dyadic( xCoarse, x, nRef )
-% Given x ( n Gauss-Legendre nodes on [-1, 1]) we build the prolongation
-% matrix that interpolates data from this discretization to a finer one. 
-% This finer discretization was done using nRef dyadic refinements of the
-% original coarse discretization. Basically solving for P with two
-% Vandermonde matrices.
+function P = prol_dyadic( k, nRef )
+% Given 4 panels with k Legendre nodes each we build the prolongation
+% matrix that maps those nodes to nodes on the finer discretization
+% (dyadically refined towards the middle)
+% Matrix is of the form size 4k x ( 2k + 2k(nRef + 1) ):
+%    I   0   0   0
+%    0   P1  0   0
+%    0   0   P2  0
+%    0   0    0   I
 
-n = length(x); % Get the number of Gauss-Legendre nodes on the coarse discretization
 
-% Get the Legendre nodes in the finer discretization
-n_fine = 2*(nRef)*n;
-x_fine = zeros( n_fine, 1 );
-x_fine( (nRef + 1)*n + 1, 1) = (x(1)+x(end))/2;
-% Fill in x_fine
-for i=1:(nRef-1)
-    a = 2^(-i);
-    b = 2^(-i+1);
-    shifted = a + (b-a)*(x+1)/2;
-    x_fine( ((i-1)*n + 1 ):i*n ) = - flip(shifted);
-    x_fine( (n_fine-(i)*n + 1):( n_fine-(i-1)*n ) ) = shifted;
+% Use the functions defined below
+
+P1 = pol_dyadicPart1(k, nRef);
+P2 = pol_dyadicPart2(k, nRef);
+Ik = speye(k);
+
+P = blkdiag( Ik, P1, P2, Ik );
+
 end
 
-% Fill the middle part
-a = 0;
-b = 2^(-nRef + 1);
-shifted = a + (b-a)*(x+1)/2;
-x_fine( ((nRef-1 )*n + 1):((nRef +1 )*n) ) = [ -flip(shifted); shifted ];
 
+function P1 = pol_dyadicPart1( k, nRef )
+% Part of the prolongation matrix where the dyadic refinement is towards 1
+
+x_lege = lege.exps(k);
+
+n_fine = k*(nRef + 1);
+x_fine = zeros(n_fine, 1);
+
+% Fill the first part
+a = -1;
+if( nRef == 0 )
+    b = 1;
+else
+    b = 0;
+end
+shifted = a + (b-a)*(x_lege+1)/2;
+x_fine( 1:k  ) = shifted;
+
+breakPoints = ones(nRef, 1);
+for i=1:(nRef-1)
+    breakPoints(i) = 1 - 2^(-i);
+end
+
+% Fill x_fine
+for i=1:nRef
+    a = b; % Start where we ended up
+    b = breakPoints(i);
+    shifted = a + (b-a)*(x_lege+1)/2;
+    x_fine( (i*k + 1):(i+1)*k  ) = shifted;
+end
 
 % Build the Vandermonde matrices
-C = rcip.shortVandermonde(xCoarse, n);
-F = rcip.shortVandermonde(x_fine, n);
+C1 = rcip.shortVandermonde(x_lege, k);
+F1 = rcip.shortVandermonde(x_fine, k);
 
-P = F/C;
-
-
+P1 = F1/C1;
 
 end
+
+
+function P2 = pol_dyadicPart2( k, nRef )
+% Part of the prolongation matrix where the dyadic refinement is towards -1
+
+x_lege = lege.exps(k);
+
+n_fine = k*(nRef + 1);
+x_fine = zeros(n_fine, 1);
+
+% Fill the first part
+b = 1;
+if( nRef == 0 )
+    a = -1;
+else
+    a = 0;
+end
+shifted = a + (b-a)*(x_lege+1)/2;
+x_fine( (k*nRef + 1):( k*(nRef + 1) )  ) = shifted;
+
+breakPoints = -ones(nRef, 1);
+for i=1:(nRef-1)
+    breakPoints(i) = -1 + 2^(-i);
+end
+
+% Fill x_fine
+for i=1:nRef
+    b = a; % End where we started last time
+    a = breakPoints(i); % Start before
+    shifted = a + (b-a)*(x_lege+1)/2;
+    x_fine( (k*(nRef - i) + 1):(k*(nRef - i + 1))  ) = shifted;
+end
+
+% Build the Vandermonde matrices
+C2 = rcip.shortVandermonde(x_lege, k);
+F2 = rcip.shortVandermonde(x_fine, k);
+
+P2 = F2/C2;
+
+end
+
+

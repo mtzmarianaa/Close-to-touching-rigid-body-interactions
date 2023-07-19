@@ -25,6 +25,7 @@ classdef discs
         I_closeReg % theta such that t +- theta defines the close region for each gamma in I
         indGammas % if close to touching information given, this is the index where gamma_i starts
         nB % limits for the K matrix
+        nBCoarse % limits for the Kc matrix
     end
 
     methods
@@ -116,6 +117,8 @@ classdef discs
             listFarChunks = [];
             gamma0 = [];
             I_closeReg= [];
+            nB = [];
+            nBCoarse = [];
 
             % Settings for the geometry of the close to touching region of
             % the discs
@@ -170,11 +173,13 @@ classdef discs
                 indGammas(1) = 0;
                 indGammas(2) = gamma0.nch;
                 nB = zeros(nGammas + 2, 1);
-                nB(1) = 0;
+                nBCoarse = zeros(nGammas + 2, 1);
                 nB(2) = gamma0.npt;
+                nBCoarse(2) = gamma0.npt;
                 for i=3:(nGammas+2)
                     indGammas(i) = indGammas(i-1) + listGammas(i-2).nch;
                     nB(i) = nB(i-1) + listGammas(i-2).npt;
+                    nBCoarse(i) = nBCoarse(i-1) + listCoarseGammas(i-2).npt;
                 end
 
             end
@@ -210,6 +215,7 @@ classdef discs
             obj.I = I;
             obj.indGammas = indGammas;
             obj.nB = nB;
+            obj.nBCoarse = nBCoarse;
             obj.I_closeReg = I_closeReg;
 
             if( infoClose )
