@@ -1,4 +1,4 @@
-function [R, G] = buildR(chunkerCoarse, chunkerFine, kernel, K22_inv, P)
+function [R, G] = buildR(chunkerCoarse, chunkerFine, K22_inv, P,  kernel)
 % Build the matrix    R = (W−1c )*( P' )*( Wf )*(  K−122 )*( P )
 
 % We need Wc, Wf, P, K22
@@ -16,12 +16,12 @@ Wf = speye(nf).*Wf;
 
 nRef = floor( chunkerFine.nch/4 - 2  );
 
-if(nargin < 5)
+if(nargin < 4)
     P = rcip.prol_dyadic(chunkerCoarse.k, nRef);
     P = blkdiag(P, P);
 end
 
-if(nargin < 4)
+if(nargin < 3)
     K22 = chunkermat(chunkerFine, kernel);
     K22_inv = inv(K22);
 end

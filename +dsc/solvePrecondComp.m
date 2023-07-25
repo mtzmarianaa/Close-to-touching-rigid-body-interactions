@@ -32,7 +32,7 @@ if( nargin < 6 )
         P = rcip.prol_dyadic(ds.listCoarseGammas(i).k, nRef);
         P = blkdiag(P, P);
         listP{i} = P;
-        listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), kernel, K22_inv, P);
+        listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), K22_inv, P, kernel);
     end
 end
 
@@ -93,7 +93,6 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 % Put the 3 matrices together
-Kc = Kc;
 Kc = bigEye + Kc*block_R;
 
 % Solve the linear system using GMRES

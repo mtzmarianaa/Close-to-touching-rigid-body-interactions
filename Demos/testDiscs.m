@@ -6,7 +6,7 @@ addpaths_loc();
 % 2 discs
 
 geom = [];
-geom.ctrs = [0 1.5001; 0 0];
+geom.ctrs = [0 1.50001; 0 0];
 geom.Rs = [0.75; 0.75];
 geom.nBreakPoints = [10; 10];
 pClose = [];
@@ -17,7 +17,7 @@ pClose(2).data = [pi, 1, 1];
 pClose(2).nClose = 1;
 pClose(2).thetasReg = pi/6;
 
-
+Kds = chunkermat(ds.chnkrs, kern, opts2);
 
 % Directly with the builder
 

@@ -56,13 +56,56 @@ else
     matOffSetCoarse = 0.5*eye(ds.nBCoarse(end));
 end
 
+% See if we have the correct files for the interpolation
+if strcmp(solveType, 'interprecondcomp')
+    if isfile('../+prc/matInterpolant_Capacitance.mat')
+        load('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
+    else
+        % Meaning mat interpolant is not saved, but maybe we do have the
+        % list of precomputed R
+        if isfile('../+prc/listPrecomputedR_Capacitance.mat')
+            load('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
+            % With this we can build matInterpolant
+            matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
+        else
+            % We dont have mat interpolant and we dont have the list of
+            % precomputed Rs
+            geom0 = [];
+            geom0.Rs = [0.75; 0.75];
+            geom0.ctrs = [0  1.6; 0 0];
+            geom0.nBreakPoints = [10;10];
+            pClose0 = [];
+            pClose0(1).data = [0 2 1];
+            pClose0(1).nClose = 1;
+            pClose0(1).thetasReg = pi/6;
+            pClose0(2).data = [pi, 1, 1];
+            pClose0(2).nClose =1;
+            pClose0(2).thetasReg = pi/6;
+            if isfile('../+prc/listK22_invCapacitance.mat')
+                load('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
+                [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+                    pClose0, listK22_invCapacitance);
+                matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
+            else
+                listK22_invCapacitance = rcip.listK22_invCapacitance(geom0, pClose0);
+                [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+                    pClose0, listK22_invCapacitance);
+                matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
+            end
+        end
+    end
+end
+
+
 % Solve according to preferences
 if strcmp(solveType, 'full')
     [sigma, nGMRES] = dsc.solveFull(ds, rhs, kern, matOffSet);
 elseif strcmp(solveType, 'precond')
     [sigma, nGMRES] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
-else
+elseif strcmp(solveType, 'precondcomp')
     [sigma, nGMRES] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
+elseif strcmp(solveType, 'interprecondcomp')
+    [sigma, nGMRES] = dsc.solveInterpPrecond(ds, rhs, kern, matInterpolant, matOffSet, matOffSetCoarse);
 end
 
 
@@ -160,6 +203,7 @@ if( nargout > 3 )
     fprintf('%5.2e s : time to find points off surface\n',t3)
     
     % Evaluate points off surface
+    DLplusSL = @(s,t) krns.DLplusSL(s,t);
     s = tic;
     Dsol_capacitance = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma , targets(:,~in)); 
     t4 = toc(s);
