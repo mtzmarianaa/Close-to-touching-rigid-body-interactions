@@ -15,6 +15,7 @@ nf = chunkerFine.npt;
 Wf = speye(nf).*Wf;
 
 nRef = floor( chunkerFine.nch/4 - 2  );
+nRef = max(0, nRef);
 
 if(nargin < 4)
     P = rcip.prol_dyadic(chunkerCoarse.k, nRef);

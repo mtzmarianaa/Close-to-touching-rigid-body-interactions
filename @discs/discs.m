@@ -137,7 +137,7 @@ classdef discs
                     % considered as close, set it to pi/3
                     if ( ~isfield(pClose(i), 'thetasReg') || ...
                             length(pClose(i).thetasReg) ~=  pClose(i).nClose)
-                        pClose(i).thetasReg = pi/3*ones(pClose(i).nClose, 1);
+                        pClose(i).thetasReg = pi/6*ones(pClose(i).nClose, 1);
                     end
 
                     % Check that we have the minimum number of breakpoints

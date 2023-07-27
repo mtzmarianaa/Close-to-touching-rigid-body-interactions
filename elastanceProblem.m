@@ -89,12 +89,17 @@ if strcmp(solveType, 'interprecondcomp')
                 load('../+prc/listK22_invElastance.mat', 'listK22_invElastance');
                 [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                     pClose0, listK22_invElastance);
+                save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
                 matInterpolant = rcip.buildInterp(listPrecomputedR_Elastance);
+                save('../+prc/matInterpolant_Elastance.mat', 'matInterpolant_Elastance');
             else
                 listK22_invElastance = rcip.listK22_invElastance(geom0, pClose0);
+                save('../+prc/matInterpolant_Elastance.mat', 'matInterpolant_Elastance');
                 [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                     pClose0, listK22_invElastance);
+                save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
                 matInterpolant = rcip.buildInterp(listPrecomputedR_Elastance);
+                save('../+prc/matInterpolant_Elastance.mat', 'matInterpolant_Elastance');
             end
         end
     end

@@ -16,6 +16,10 @@ t2 = toc(s);
 
 nGMRES = nGMRES(2);
 
-fprintf("%5.2e s :time taken to solve the full linear system with GMRES\n", t2);
+[m, n] = size(K_full);
+
+fprintf("\n\n\nNEW GMRES SOLVE FULL \n\n     %5.2e  time solve  \n     " + ...
+    "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(K_full));
+
 
 end

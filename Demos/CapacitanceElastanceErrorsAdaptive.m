@@ -2,8 +2,8 @@
 %%% then elastance and compare
 % FULL SYSTEM SOLVE
 addpaths_loc();
-clear all
-close all
+% clear all
+% close all
 clc
 
 u1 = @(x) 0*x(1, :);
@@ -33,7 +33,7 @@ pClose(2).nClose =1;
 pClose(2).thetasReg = pi/6;
 
 
-xcoordCtr2 = 1.5 + [ 1e-1 1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8  ];
+xcoordCtr2 = [ 1e-1 1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8  ];
 nTest = length(xcoordCtr2);
 
 

@@ -29,6 +29,7 @@ if( nargin < 6 )
         K22_inv = inv(  K22 + matOffSet( (nB(i+1)+1):nB(i+2),  (nB(i+1)+1):nB(i+2) ) );
         listKs_inv{i} = K22_inv;
         nRef = floor(ds.listGammas(i).nch/4 - 2);
+        nRef = max(0, nRef);
         P = rcip.prol_dyadic(ds.listCoarseGammas(i).k, nRef);
         P = blkdiag(P, P);
         listP{i} = P;
@@ -39,7 +40,7 @@ end
 if( nargin < 8 )
     listR = cell(1, ds.nGammas);
         for i =1:nGammas
-            listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), kernel, listKs_inv{i}, listP{i});
+            listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), listKs_inv{i}, listP{i}, kernel);
         end
 end
 
@@ -51,6 +52,7 @@ bigEye = speye(NtotC);
 % Build the block diagonal matrix
 I0 = eye(ds.gamma0.npt);
 block_R = blkdiag(I0, listR{:});
+blockProlongation = blkdiag(I0, listP{:});
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 % Build Kc matrix
@@ -100,15 +102,17 @@ Kc = bigEye + Kc*block_R;
 s = tic();
 [sigmaPrecondComp, ~, ~, nGMRES] = gmres( Kc, rhsC, [], 1e-10, size(Kc,1) );
 t2 = toc(s);
-fprintf("%5.2e s :time taken to solve the compressed precond linear system with GMRES\n", t2);
+
+[m,n] = size(Kc);
+fprintf("\n\n\nNEW GMRES SOLVE BLOCK PRECOND COMPR \n\n     %5.2e  time solve  \n     " + ...
+    "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(Kc));
+
 nGMRES = nGMRES(2);
 
 % Get sigma in the fine discretization
 
-bigP = blkdiag( I0, listP{:} );
-blockInv = blkdiag(I0, listKs_inv{:});
 
-sigmaPrecondComp = blockInv*bigP*sigmaPrecondComp;
+sigmaPrecondComp = blockProlongation*block_R*sigmaPrecondComp;
 
 
 end

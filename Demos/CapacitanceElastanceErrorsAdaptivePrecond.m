@@ -2,8 +2,8 @@
 %%% then elastance and compare
 % FULL  BLOCK PRECONDITIONED SYSTEM SOLVE
 addpaths_loc();
-clear all
-close all
+% clear all
+% close all
 clc
 
 u1 = @(x) 0*x(1, :);

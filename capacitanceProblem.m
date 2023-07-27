@@ -67,6 +67,7 @@ if strcmp(solveType, 'interprecondcomp')
             load('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
             % With this we can build matInterpolant
             matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
+            save('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
         else
             % We dont have mat interpolant and we dont have the list of
             % precomputed Rs
@@ -85,12 +86,17 @@ if strcmp(solveType, 'interprecondcomp')
                 load('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
                 [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                     pClose0, listK22_invCapacitance);
+                save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
                 matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
+                save('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
             else
                 listK22_invCapacitance = rcip.listK22_invCapacitance(geom0, pClose0);
+                save('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
                 [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                     pClose0, listK22_invCapacitance);
+                save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
                 matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
+                save('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
             end
         end
     end

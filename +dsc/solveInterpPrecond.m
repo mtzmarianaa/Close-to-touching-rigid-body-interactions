@@ -36,6 +36,7 @@ end
 % Interpolation part
 d = norm( ds.ctrs(:, 2) - ds.ctrs(:, 1)) - ds.Rs(1) - ds.Rs(2);
 kCh = floor( log( (norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2))/d  )*(1/log(2)) );
+kCh = max(0, kCh);
 %   corresponding coefficients
 
 da = 1/(2^kCh)*(norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2) );
@@ -49,6 +50,7 @@ R_interpolated = rcip.evaluateRInterpolated(xDist, matInterpolant{kCh+1});
 
 % Build the system
 nRef = floor(ds.listGammas(1).nch/4 - 2);
+nRef = max(0, nRef);
 P = rcip.prol_dyadic(ds.listCoarseGammas(1).k, nRef);
 P = blkdiag(P, P);
 NtotC = ds.gamma0.npt + sum( ds.listCoarseGammas(:).npt );
@@ -110,7 +112,11 @@ Kc = bigEye + Kc*block_R;
 s = tic();
 [sigmaInterpPrecond, ~, ~, nGMRES] = gmres( Kc, rhsC, [], 1e-10, size(Kc,1) );
 t2 = toc(s);
-fprintf("%5.2e s :time taken to solve the compressed precond linear system with GMRES\n", t2);
+
+[m,n] = size(Kc);
+fprintf("\n\n\nNEW GMRES SOLVE BLOCK PRECOND INTERPOLATION \n\n     %5.2e  time solve  \n     " + ...
+    "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(Kc));
+
 nGMRES = nGMRES(2);
 
 % Get sigma in the fine discretization

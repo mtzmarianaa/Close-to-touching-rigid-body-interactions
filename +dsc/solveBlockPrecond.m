@@ -19,6 +19,9 @@ t2 = toc(s);
 nGMRES = nGMRES(2);
 sigmaBlockPrecond = block_inv*sigmaBlockPrecond;
 
-fprintf("%5.2e s :time taken to solve the full precond linear system with GMRES\n", t2);
+[m,n] = size(K_precond);
+fprintf("\n\n\nNEW GMRES SOLVE BLOCK PRECOND \n\n     %5.2e  time solve  \n     " + ...
+    "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(K_precond));
+
 
 end
