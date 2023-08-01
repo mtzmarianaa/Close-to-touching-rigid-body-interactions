@@ -8,8 +8,6 @@ clc
 u1 = @(x) 0*x(1, :);
 u2 = @(x) 1+0*x(1, :);
 
-nTest = 5;
-
 uk = {u1, u2}; % Functions uk, u on the boundary of the k-th circle
 ctrs = [0 1.500005 ;0 0]; % Centers of the circles
 Rs = [0.75; 0.75]; % Radi of the circles
@@ -22,54 +20,52 @@ geom = [];
 geom.Rs = Rs;
 geom.nBreakPoints = nBreakPoints;
 
-k = 16;
-x = lege.exps(k);
-sigma1 = zeros(nTest, k*(nBreakPoints(1)-1));
-sigma2 = zeros(nTest, k*(nBreakPoints(2) -1) );
+pClose = [];
+pClose(1).data = [0 2 1];
+pClose(1).nClose = 1;
+pClose(1).thetasReg = pi/6;
+pClose(2).data = [pi, 1, 1];
+pClose(2).nClose =1;
+pClose(2).thetasReg = pi/6;
 
-xcoordCtr2 = linspace(1.500005, 1.75, nTest ); % Variation in the coordinate ctrs(1,2), moving the discs closer
+xcoordCtr2 = 1.5 + [ 1e-1 1e-3 1e-5];
+nTest = length(xcoordCtr2);
+
+figure()
+hold on
+
+colors = [0 23 255; 111 0 203; 60 228 225];
+colors = colors./255;
 
 for i=1:nTest
     ctrs(1,2) = xcoordCtr2(i);
     geom.ctrs = ctrs;
-    ds2 = discs(geom);
+    ds2 = discs(geom, pClose);
     [q, sigma] = capacitanceProblem(ds2, uk);
-    % Fill the matricies with computed densities
-    sigma1(i, :) = sigma(1:k*(nBreakPoints(1)-1) ) ; 
-    sigma2(i, :) = sigma(( k*(nBreakPoints(1)-1) + 1 ):end);
+    % Get the angles
+    flag2 = dsc.flagnDisc(2, ds2);
+    flag2_points = repmat(flag2, 1, ds2.chnkrs.k);
+    flag2_points = flag2_points';
+    flag2_points = logical( flag2_points(:) );
+    points2 = reshape( ds2.chnkrs.r, 2, [] );
+    points2 = points2(:, flag2_points);
+    sigma2 = sigma(flag2_points);
+    addPiTh = points2(2, :) < 0;
+    thetas2 = acos(  (points2(1, :) - ctrs(1, 2) )./( Rs(2) ) );
+    thetas2(addPiTh) = 2*pi - thetas2(addPiTh);
+    [thetas2, indS] = sort(thetas2);
+    sigma2 = sigma2(indS);
+    % Plot
+    plot(thetas2(:), sigma2(:), '-o', 'Color', colors(i, :))
 end
 
-% Put everything in order
-k = ds2.listChnkrs.k;
-x = lege.exps(k); % Get the legendre nodes
 
-
-% Get the angles
-points1 = reshape( ds2.listChnkrs(1).r, 2, [] );
-points2 = reshape( ds2.listChnkrs(2).r, 2, [] );
-thetas1 = acos(  (points1(1, :) - ctrs(1, 1) )./( Rs(1)  ) );
-thetas2 = acos(  (points2(1, :) - ctrs(1, 2) )./( Rs(2) ) );
-
-
-% Plot density vs angle for both circles
-% For circle1
-figure()
 leg = string(xcoordCtr2 - 1.5);
-plot(thetas1(:), sigma1, '-o')
-title("Solution density and angle, disc 1")
 xlabel("Angle")
 ylabel("\sigma")
-legend(leg)
-
-
-% For circle2
-figure()
-leg = string(xcoordCtr2 - 1.5);
-plot(thetas2(:), sigma2, '-o')
-title("Solution density and angle, disc 2")
-xlabel("Angle")
-ylabel("\sigma")
-legend(leg)
+legendS = legend(leg);
+title(legendS, 'd')
+title("Solution density and angle, \Omega_{2}")
 
 
 

@@ -20,8 +20,8 @@ if( nargin < 4 )
 end
 if( nargin < 5 )
     outopt = [];
-    outopt.fact = 3;
-    outopt.nplot = 250;
+    outopt.fact = 1.5;
+    outopt.nplot = 750;
 end
 
 
@@ -167,19 +167,27 @@ if( plt )
     allXonSurface = reshape(ds.chnkrs.r, 2, ds.chnkrs.k*ds.chnkrs.nch);
     figure()
     scatter3(allXonSurface(1, :), allXonSurface(2, :), sigma, [], cq)
-    title("Capacitance Problem - sigma on surface, GMRES")
+    title("Capacitance Problem - sigma on surface")
 
 
     % Plot the charges qk
+    maxQ = round( max(abs(q)) );
     figure()
     for i=1:n
-        [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q(i) , ds.Rs(i) , ds.Rs(i) , 0 );
-        s = surf(X,Y,Z,'FaceAlpha',0.5);
+        [X,Y,Z] = ellipsoid( ctrs(1, i) , ctrs(2, i) , q(i) , ds.Rs(i) , ds.Rs(i) , 0 , 50);
+        s = surf(X,Y,Z,'FaceAlpha',0.9);
         s.EdgeColor = 'none';
+        annotation = ['q_{', num2str(i), '}=', num2str(q(i))];
+        text(ctrs(1, i) , ctrs(2, i) , q(i), annotation)
         hold on
     end
     colorbar
-    title("Capacitance Problem - Total charge on each disc, GMRES")
+    view(2)
+    axis equal
+    clim([-maxQ, maxQ]);
+    grid off
+    title("Capacitance Problem - Total charge on each disc")
+    ylim([-1.5 1.5])
     hold off
 
 end

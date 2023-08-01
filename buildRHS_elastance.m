@@ -1,4 +1,4 @@
-function rhs_elastance = buildRHS_elastance(ds, listChunkers, nB, flagFunction, qk)
+function [rhs_elastance, nu] = buildRHS_elastance(ds, listChunkers, nB, flagFunction, qk)
 % Build the rhs to solve the elastance problem. Depending on the arguments
 % given it can build the rhs for the fine or the coarse discretizations
 
@@ -14,7 +14,7 @@ chnkrs = merge(listChunkers);
 
 
 % Build nu (this is used for the RHS)
-nu = ones(nB(end), 1);
+nuE = ones(nB(end), 1);
 for i= 1:nDiscs
     % Use the flag
     flag = logical( flagFunction(i, ds) );
@@ -26,7 +26,11 @@ for i= 1:nDiscs
     f( ~flag_points) = 0; % Cancel out contribution from other discs
     % Get the perimeter of omegak
     per = chunkerintegral(chnkrs, f, []);
-    nu(flag_points) = qk(i)/per;
+    nuE(flag_points) = qk(i)/per;
+end
+
+if(nargout>1)
+    nu = nuE;
 end
 
 % Build the rhs matrix
@@ -57,6 +61,6 @@ for k=1:nChunkers
     end
 end
 
-rhs_elastance = -rhs_chunkermat*nu;
+rhs_elastance = -rhs_chunkermat*nuE;
 
 end

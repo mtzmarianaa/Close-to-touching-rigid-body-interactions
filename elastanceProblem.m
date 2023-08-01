@@ -20,8 +20,8 @@ if( nargin < 4 )
 end
 if( nargin < 5 )
     outopt = [];
-    outopt.fact = 3;
-    outopt.nplot = 250;
+    outopt.fact = 1.5;
+    outopt.nplot = 750;
 end
 
 if ~isfield(outopt, 'fact')
@@ -55,8 +55,13 @@ else
 
     % Build the rhs
     rhs = buildRHS_elastance(ds, [ds.gamma0, ds.listCoarseGammas] , ds.nBCoarse, flagFunctionCoarse, qk);
+    
 end
 
+% Save nu in the fine discretization if we need to plot
+if(plt)
+    [~, nu] = buildRHS_elastance(ds, ds.listChnkrs, ds.nB, flagFunction, qk);
+end
 
 % See if we have the correct files for the interpolation
 if strcmp(solveType, 'interprecondcomp')
@@ -220,8 +225,12 @@ if( nargout > 3 )
         figure()
         h=surf(xxtarg,yytarg,zztarg);
         set(h,'EdgeColor','none')
-        title("Elastance Problem - Potential in the exterior")
+        title("Elastance problem - Potential in the exterior")
         colorbar
+        view(2)
+        axis equal
+        grid off
+        ylim([-1.5 1.5])
     
     end
 end

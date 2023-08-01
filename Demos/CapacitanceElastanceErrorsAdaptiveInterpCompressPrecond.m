@@ -34,7 +34,8 @@ pClose(2).nClose =1;
 pClose(2).thetasReg = pi/6;
 
 
-xcoordCtr2 = [ 1e-1 1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8  ];
+xcoordCtr2 = 1.5 + [ 1e-1 1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8  ];
+%xcoordCtr2 = 1.5 + [ 1e-3 ];
 nTest = length(xcoordCtr2);
 
 errors_ukAdaptive = zeros( nTest, 1 );

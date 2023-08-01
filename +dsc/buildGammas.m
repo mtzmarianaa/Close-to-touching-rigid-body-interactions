@@ -137,11 +137,13 @@ end
 function alpha_0 = minAlpha(thetaReg, R, dist)
 % Computes minimum refinement needed
 
-alpha_0 = thetaReg/2;
+alpha_0 = thetaReg;
 
 while( R*alpha_0 > dist )
     alpha_0 = 0.5*alpha_0;
 end
+
+alpha_0 = min(thetaReg/2, alpha_0);
 
 
 end

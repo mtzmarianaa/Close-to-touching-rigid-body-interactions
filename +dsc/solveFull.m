@@ -21,5 +21,14 @@ nGMRES = nGMRES(2);
 fprintf("\n\n\nNEW GMRES SOLVE FULL \n\n     %5.2e  time solve  \n     " + ...
     "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(K_full));
 
+% cmap_bpp = rgbmap('white', 'powder blue', 'cornflower blue', 'purple blue', 'royal purple', 1024);
+% figure()
+% x = [0, m];
+% y = [0, m];
+% imagesc(x, y, K_full)
+% title("K_{full}")
+% colorbar()
+% colormap(cmap_bpp)
+% axis image
 
 end

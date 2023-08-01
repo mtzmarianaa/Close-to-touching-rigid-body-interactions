@@ -113,6 +113,13 @@ s = tic();
 [sigmaInterpPrecond, ~, ~, nGMRES] = gmres( Kc, rhsC, [], 1e-10, size(Kc,1) );
 t2 = toc(s);
 
+% cmap_bpp = rgbmap('white', 'powder blue', 'cornflower blue', 'purple blue', 'royal purple');
+% figure()
+% imagesc(inv(block_R)*Kc)
+% title("K_interp")
+% colorbar()
+% colormap(cmap_bpp)
+
 [m,n] = size(Kc);
 fprintf("\n\n\nNEW GMRES SOLVE BLOCK PRECOND INTERPOLATION \n\n     %5.2e  time solve  \n     " + ...
     "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(Kc));
