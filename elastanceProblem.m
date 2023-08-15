@@ -1,4 +1,4 @@
-function [uk, sigma, nGMRES, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, plt, outopt)
+function [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, plt, outopt)
 % Given the description of the geometry of nCircles, solve the elastance
 % problem
 % IN: ds : a discs object with the given geometry of the discs
@@ -65,47 +65,34 @@ end
 
 % See if we have the correct files for the interpolation
 if strcmp(solveType, 'interprecondcomp')
-    if isfile('../+prc/matInterpolant_Elastance.mat')
-        load('../+prc/matInterpolant_Elastance.mat', 'matInterpolant_Elastance');
-        matInterpolant = matInterpolant_Elastance;
+    if isfile('../+prc/listPrecomputedR_Elastance.mat')
+        load('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
     else
-        % Meaning mat interpolant is not saved, but maybe we do have the
-        % list of precomputed R
-        if isfile('../+prc/listPrecomputedR_Elastance.mat')
-            load('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
-            % With this we can build matInterpolant
-            matInterpolant = rcip.buildInterp(listPrecomputedR_Elastance);
+        % We dont have mat interpolant and we dont have the list of
+        % precomputed Rs
+        geom0 = [];
+        geom0.Rs = [0.75; 0.75];
+        geom0.ctrs = [0  1.6; 0 0];
+        pClose0 = [];
+        pClose0(1).data = [0 2 1];
+        pClose0(1).nClose = 1;
+        pClose0(1).thetasReg = pi/6;
+        pClose0(2).data = [pi, 1, 1];
+        pClose0(2).nClose =1;
+        pClose0(2).thetasReg = pi/6;
+        pClose0(1).nBreakPoints = [10;10];
+        pClose0(2).nBreakPoints = [10;10];
+        if isfile('../+prc/listK22_invElastance.mat')
+            load('../+prc/listK22_invElastance.mat', 'listK22_invElastance');
+            [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+                pClose0, listK22_invElastance);
+            save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance.mat');
         else
-            % We dont have mat interpolant and we dont have the list of
-            % precomputed Rs
-            geom0 = [];
-            geom0.Rs = [0.75; 0.75];
-            geom0.ctrs = [0  1.6; 0 0];
-            pClose0 = [];
-            pClose0(1).data = [0 2 1];
-            pClose0(1).nClose = 1;
-            pClose0(1).thetasReg = pi/6;
-            pClose0(2).data = [pi, 1, 1];
-            pClose0(2).nClose =1;
-            pClose0(2).thetasReg = pi/6;
-            pClose0(1).nBreakPoints = [10;10];
-            pClose0(2).nBreakPoints = [10;10];
-            if isfile('../+prc/listK22_invElastance.mat')
-                load('../+prc/listK22_invElastance.mat', 'listK22_invElastance');
-                [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                    pClose0, listK22_invElastance);
-                save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
-                matInterpolant = rcip.buildInterp(listPrecomputedR_Elastance);
-                save('../+prc/matInterpolant_Elastance.mat', 'matInterpolant_Elastance');
-            else
-                listK22_invElastance = rcip.listK22_invElastance(geom0, pClose0);
-                save('../+prc/matInterpolant_Elastance.mat', 'matInterpolant_Elastance');
-                [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                    pClose0, listK22_invElastance);
-                save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
-                matInterpolant = rcip.buildInterp(listPrecomputedR_Elastance);
-                save('../+prc/matInterpolant_Elastance.mat', 'matInterpolant_Elastance');
-            end
+            listK22_invElastance = rcip.listK22_invElastance(geom0, pClose0);
+            save('../+prc/listK22_invElastance.mat', 'listK22_invElastance.mat');
+            [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+                pClose0, listK22_invElastance);
+            save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
         end
     end
 end
@@ -115,13 +102,13 @@ end
 % Solve according to preferences
 
 if strcmp(solveType, 'full')
-    [sigma, nGMRES] = dsc.solveFull(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveFull(ds, rhs, kern, matOffSet);
 elseif strcmp(solveType, 'precond')
-    [sigma, nGMRES] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
 elseif strcmp(solveType, 'precondcomp')
-    [sigma, nGMRES] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
 elseif strcmp(solveType, 'interprecondcomp')
-    [sigma, nGMRES] = dsc.solveInterpPrecond(ds, rhs, kern, matInterpolant, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Elastance, matOffSet, matOffSetCoarse);
 end
 
 
@@ -129,6 +116,10 @@ end
 
 uk = -M*sigma;
 
+
+if(nargout > 3)
+    tSolve = tS;
+end
 
 % Plot if necessary
 
@@ -185,7 +176,7 @@ if( plt )
 end
 
 
-if( nargout > 3 )
+if( nargout > 4 )
     % We also need zztarg, xxtarg, yytarg
     % Find points off surface
     rmin = min(ds.chnkrs);

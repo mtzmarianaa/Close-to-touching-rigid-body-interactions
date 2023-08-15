@@ -1,5 +1,5 @@
 function [R, G] = buildR(chunkerCoarse, chunkerFine, K22_inv, P,  kernel)
-% Build the matrix    R = (W−1c )*( P' )*( Wf )*(  K−122 )*( P )
+% Build the matrix    R = (W−1c )*( P' )*( Wf )*(  K22−1 )*( P )
 
 % We need Wc, Wf, P, K22
 Wc = weights(chunkerCoarse);

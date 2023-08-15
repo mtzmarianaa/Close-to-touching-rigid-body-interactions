@@ -1,4 +1,4 @@
-function [sigmaPrecondComp, nGMRES] = solvePrecondComp( ds, rhsC, kernel, matOffSet, matOffSetCoarse, listKs_inv, listP, listR )
+function [sigmaPrecondComp, nGMRES, tSolve] = solvePrecondComp( ds, rhsC, kernel, matOffSet, matOffSetCoarse, listKs_inv, listP, listR )
 % Solve the BIE for K*sigma = rhs FULLY, with preconditioning AND compressing
 % Also outputs the number of GMRES iterations needed to solve the problem
 
@@ -18,7 +18,7 @@ if( nargin < 5)
     matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
     matOffSetCoarse = sparse( ds.nBCoarse(end), ds.nBCoarse(end) );
 end
-
+s = tic();
 % Build the inverses and the R matrices if needed
 if( nargin < 6 )
     listKs_inv = cell(1, ds.nGammas);
@@ -99,7 +99,7 @@ Kc = bigEye + Kc*block_R;
 
 % Solve the linear system using GMRES
 
-s = tic();
+
 [sigmaPrecondComp, ~, ~, nGMRES] = gmres( Kc, rhsC, [], 1e-10, size(Kc,1) );
 t2 = toc(s);
 
@@ -114,5 +114,9 @@ nGMRES = nGMRES(2);
 
 sigmaPrecondComp = blockProlongation*block_R*sigmaPrecondComp;
 
+
+if(nargout > 2)
+    tSolve = t2;
+end
 
 end

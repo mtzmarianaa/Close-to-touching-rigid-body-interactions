@@ -1,7 +1,7 @@
-function [sigmaInterpPrecond, nGMRES] = solveInterpPrecond(ds, rhsC, kernel, matInterpolant, matOffSet, matOffSetCoarse, geom0)
+function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0)
 % Solve the BIE for K*sigma = rhs FULLY, with interpolation, preconditioning AND compressing
-% Also outputs the number of GMRES iterations needed to solve the problem
-% TWO DISCS ONLY
+% Also outputs the number of GMRES iterations and time needed to solve the problem
+% 
 
 assert( ds.nGammas==1, 'Interpolation, preconditioning and compression only supported for two discs at this moment \n' );
 
@@ -32,7 +32,7 @@ if( nargin < 6)
     matOffSetCoarse = sparse( ds.nBCoarse(end), ds.nBCoarse(end) );
 end
 
-
+s = tic();
 % Interpolation part
 d = norm( ds.ctrs(:, 2) - ds.ctrs(:, 1)) - ds.Rs(1) - ds.Rs(2);
 kCh = floor( log( (norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2))/d  )*(1/log(2)) );
@@ -45,7 +45,7 @@ db = 1/(2^(kCh + 1))*(norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - 
 xDist = 2*(d - da)/(db - da) - 1;
 
 % Evaluate the interpolated R
-R_interpolated = rcip.evaluateRInterpolated(xDist, matInterpolant{kCh+1});
+R_interpolated = rcip.evaluateRInterpolated(xDist, listPrecomputedR{kCh+1});
 
 
 % Build the system
@@ -109,7 +109,7 @@ Kc = bigEye + Kc*block_R;
 
 % Solve the linear system using GMRES
 
-s = tic();
+
 [sigmaInterpPrecond, ~, ~, nGMRES] = gmres( Kc, rhsC, [], 1e-10, size(Kc,1) );
 t2 = toc(s);
 
@@ -130,5 +130,8 @@ nGMRES = nGMRES(2);
 blockProlongation = blkdiag(I0, P);
 sigmaInterpPrecond = blockProlongation*block_R*sigmaInterpPrecond;
 
+if(nargout > 2)
+    tSolve = t2;
+end
 
 end

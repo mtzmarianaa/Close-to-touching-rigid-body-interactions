@@ -1,4 +1,4 @@
-function [q, sigma, nGMRES, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, plt, outopt)
+function [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, plt, outopt)
 % Given the description of the geometry of nCircles solve the capacitance
 % problem. 
 % IN: ds : a discs object with the given geometry of the discs
@@ -58,46 +58,34 @@ end
 
 % See if we have the correct files for the interpolation
 if strcmp(solveType, 'interprecondcomp')
-    if isfile('../+prc/matInterpolant_Capacitance.mat')
-        load('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
+    if isfile('../+prc/listPrecomputedR_Capacitance.mat')
+        load('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
     else
-        % Meaning mat interpolant is not saved, but maybe we do have the
-        % list of precomputed R
-        if isfile('../+prc/listPrecomputedR_Capacitance.mat')
-            load('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
-            % With this we can build matInterpolant
-            matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
-            save('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
+        % We dont have mat interpolant and we dont have the list of
+        % precomputed Rs
+        geom0 = [];
+        geom0.Rs = [0.75; 0.75];
+        geom0.ctrs = [0  1.6; 0 0];
+        pClose0 = [];
+        pClose0(1).data = [0 2 1];
+        pClose0(1).nClose = 1;
+        pClose0(1).thetasReg = pi/6;
+        pClose0(2).data = [pi, 1, 1];
+        pClose0(2).nClose =1;
+        pClose0(2).thetasReg = pi/6;
+        pClose0(1).nBreakPoints = [10;10];
+        pClose0(2).nBreakPoints = [10;10];
+        if isfile('../+prc/listK22_invCapacitance.mat')
+            load('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
+            [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+                pClose0, listK22_invCapacitance);
+            save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance.mat');
         else
-            % We dont have mat interpolant and we dont have the list of
-            % precomputed Rs
-            geom0 = [];
-            geom0.Rs = [0.75; 0.75];
-            geom0.ctrs = [0  1.6; 0 0];
-            geom0.nBreakPoints = [10;10];
-            pClose0 = [];
-            pClose0(1).data = [0 2 1];
-            pClose0(1).nClose = 1;
-            pClose0(1).thetasReg = pi/6;
-            pClose0(2).data = [pi, 1, 1];
-            pClose0(2).nClose =1;
-            pClose0(2).thetasReg = pi/6;
-            if isfile('../+prc/listK22_invCapacitance.mat')
-                load('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
-                [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                    pClose0, listK22_invCapacitance);
-                save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
-                matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
-                save('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
-            else
-                listK22_invCapacitance = rcip.listK22_invCapacitance(geom0, pClose0);
-                save('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
-                [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                    pClose0, listK22_invCapacitance);
-                save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
-                matInterpolant = rcip.buildInterp(listPrecomputedR_Capacitance);
-                save('../+prc/matInterpolant_Capacitance.mat', 'matInterpolant');
-            end
+            listK22_invCapacitance = rcip.listK22_invCapacitance(geom0, pClose0);
+            save('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance.mat');
+            [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+                pClose0, listK22_invCapacitance);
+            save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
         end
     end
 end
@@ -105,13 +93,13 @@ end
 
 % Solve according to preferences
 if strcmp(solveType, 'full')
-    [sigma, nGMRES] = dsc.solveFull(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveFull(ds, rhs, kern, matOffSet);
 elseif strcmp(solveType, 'precond')
-    [sigma, nGMRES] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
 elseif strcmp(solveType, 'precondcomp')
-    [sigma, nGMRES] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
 elseif strcmp(solveType, 'interprecondcomp')
-    [sigma, nGMRES] = dsc.solveInterpPrecond(ds, rhs, kern, matInterpolant, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Capacitance, matOffSet, matOffSetCoarse);
 end
 
 
@@ -133,7 +121,9 @@ for i=1:n
     fprintf("%5.5e : charge at disk %1.0e with GMRES\n\n", q(i), i);
 end
 
-
+if(nargout > 3)
+    tSolve = tS;
+end
 
 % Plot if necessary
 
@@ -194,7 +184,7 @@ end
 
 
 
-if( nargout > 3 )
+if( nargout > 4 )
     % We also need zztarg, xxtarg, yytarg
     % Find points off surface
     rmin = min(ds.chnkrs);

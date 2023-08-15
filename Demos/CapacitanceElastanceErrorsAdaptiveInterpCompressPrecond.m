@@ -35,12 +35,13 @@ pClose(2).thetasReg = pi/6;
 
 
 xcoordCtr2 = 1.5 + [ 1e-1 1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8  ];
-%xcoordCtr2 = 1.5 + [ 1e-3 ];
 nTest = length(xcoordCtr2);
 
 errors_ukAdaptive = zeros( nTest, 1 );
 nGMRES_capacitance = zeros( nTest, 1);
 nGMRES_elastance = zeros( nTest, 1 );
+tSolve_capacitance = zeros(nTest, 1);
+tSolve_elastance = zeros(nTest, 1);
 depth = zeros(nTest, 1);
 
 for i=1:nTest
@@ -49,7 +50,8 @@ for i=1:nTest
     ds = discs(geom, pClose);
     depth(i) = floor( ds.listGammas(1).nch/4 - 2  );
     % First solve capacitance
-    [qkC, sigmaC, nGMRES_C] = capacitanceProblem(ds, uk, solveType);
+    [qkC, sigmaC, nGMRES_C, tS] = capacitanceProblem(ds, uk, solveType);
+    tSolve_capacitance(i) = tS;
     % Compute ukC
     ukC = zeros(ds.chnkrs.npt, 1);
     for k = 1:n 
@@ -65,7 +67,8 @@ for i=1:nTest
         ukC(flag_points) = u_toUse';
     end
     % Now with this q solve elastance
-    [ukE, sigmaE, nGMRES_E] = elastanceProblem(ds, qkC, solveType);
+    [ukE, sigmaE, nGMRES_E, tS] = elastanceProblem(ds, qkC, solveType);
+    tSolve_elastance(i) = tS;
     % Compute the difference
     errors_ukAdaptive(i) = norm(ukC - ukE)/norm(ukC);
     % Add the number of iterations needed

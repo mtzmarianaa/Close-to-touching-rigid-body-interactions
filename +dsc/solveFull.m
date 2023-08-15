@@ -1,4 +1,4 @@
-function [sigmaFull, nGMRES] = solveFull( ds, rhs, kernel, matOffSet )
+function [sigmaFull, nGMRES, tSolve] = solveFull( ds, rhs, kernel, matOffSet )
 % Solve the BIE for K*sigma = rhs FULLY, no preconditioning or compressing
 % Also outputs the number of GMRES iterations needed to solve the problem
 
@@ -6,11 +6,11 @@ function [sigmaFull, nGMRES] = solveFull( ds, rhs, kernel, matOffSet )
 if( nargin < 3)
     matOffSet = zeros(ds.chnkrs.npt);
 end
-
+s = tic();
 % Build the matrix, no inverses required
 K_full = dsc.buildFullK(ds, kernel, matOffSet);
 
-s = tic();
+
 [sigmaFull, ~, ~, nGMRES] = gmres(K_full, rhs, [], 1e-10, size(K_full, 1));
 t2 = toc(s);
 
@@ -20,6 +20,10 @@ nGMRES = nGMRES(2);
 
 fprintf("\n\n\nNEW GMRES SOLVE FULL \n\n     %5.2e  time solve  \n     " + ...
     "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(K_full));
+
+if(nargout > 2)
+    tSolve = t2;
+end
 
 % cmap_bpp = rgbmap('white', 'powder blue', 'cornflower blue', 'purple blue', 'royal purple', 1024);
 % figure()
