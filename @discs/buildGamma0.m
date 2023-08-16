@@ -1,13 +1,48 @@
-function [gamma0, neisMapFar, listFarChunks] = buildGamma0(geom, pClose, I, nDiscs)
-% Function that builds the far intervals (for gamma 0). Also builds
-% neisMapFar, the map for the neighbors. Not user friendly. Same idea as
-% buildGammas
+function [gamma0, neisMapFar, listFarChunks] = buildGamma0(arg1, pClose, I, nDiscs)
+% *buildGamma0* builds the far intervals on a collection of discs,
+% $\Gamma_0$. Treats these intervals as one curve (possible not connected).
+% This is not a user friendly method.
+%
+% Syntax: [gamma0, neisMapFar, listFarChunks] = buildGamma0(ds)
+%              [gamma0, neisMapFar, listFarChunks] = buildGamma0(geom, pClose, I, nDiscs)
+%
+% Input:
+%   arg1 - either a discs object describing $\Omega$, collection of non overlapping discs or geom,
+%             the description of the geometry of such discs (centers, radii)
+%
+% Optional input:
+%   pClose - if arg1 is geom then this is the information regarding
+%                $\Gamma_k$, the close-to-touching region of the discs
+%   I  - matrix, each entry corresponds to geometric information of a
+%         $\Gamma_k$, the close-to-touching region of the discs
+%
+% Output:
+%   gamma0 - a chnkr object describing $\Gamma_0$ (might be disjoint)
+%   neisMapFar - matrix describing the mapping for neighbors (useful when
+%                        defining $\Omega = \Gamma_0 \cup_{k>0} \Gamma_k$
+%   listFarChunks - list of chnkr objects describing the "pieces" of
+%                           $\Gamma_0$
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
+
+% Determine if arg1 is a discs object or if its geom
+if(isa(arg1, 'discs') && nargin<2)
+    geom = arg1.geom;
+    pClose = arg1.pClose;
+    I = arg1.I;
+    nDiscs = arg1.nDiscs;
+else
+    geom = arg1;
+end
+
+% Chunker preferences
 pref = chunkerpref();
 cparams = [];
 cparams.ta = -2*pi;
 cparams.tb = 4*pi;
 
+% Initialize
 nGammas = size(I, 1); % Number of close to touching parts
 neisMapFar = zeros(4*nGammas, 4); % With this we are going to sort the neighbor indices
 farInfo = [];
@@ -23,6 +58,7 @@ for i=1:nDiscs
     farInfo(i).currentIndex = 1;
     offSetNeisMap(i + 1) = offSetNeisMap(i) + 2*pClose(i).nClose;
 end
+
 
 % Build breakpointsClose and start filling in neisMapFar
 for r=1:nGammas
@@ -54,13 +90,14 @@ for r=1:nGammas
     neisMapFar(r4+3, 3) = s;
 end
 
+
 % sort
 %neisMapFar(:, 2) = mod(neisMapFar(:, 2), 2*pi);
 neisMapFar = sortrows(neisMapFar, [3, 2]);
 
+
 % Build the far pieces
 listFarPieces(1, nDiscs) = chunker();
-
 % Build far intervals, compute their lengths
 for r=1:nDiscs
     % Compute ends in neisMapFar

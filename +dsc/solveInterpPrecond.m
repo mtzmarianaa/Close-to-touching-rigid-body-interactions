@@ -1,14 +1,49 @@
 function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0)
-% Solve the BIE for K*sigma = rhs FULLY, with interpolation, preconditioning AND compressing
-% Also outputs the number of GMRES iterations and time needed to solve the problem
-% 
+% *solveInterpPrecond* solve the BIE for K*sigma = rhs. Solves the compressed,
+% preconditioned system using interpolation from precomputed matrices. 
+% Solves the linear system with GMRES. Also outputs number of GMRES 
+% iterations needed to solve the problem. 
+% Could output time taken to assemble and solve the problem.
+%
+% Syntax: [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   rhs - right hand side of the BIE
+%   kernel - kernel object (from chunkie) or function handle definind the
+%                kernel to use
+%   listPrecomputedR - list of precomputed R matrices (has to be given)
+%
+% Optional input:
+%   matOffSet - matrix defining the integral operator in the fine mesh which is not a kernel
+%                        (has to be a matrix)
+%   matOffSetCoarse - matrix defining the integral operator in the coarse mesh which is not a kernel
+%                        (has to be a matrix)
+%   geom0 - initial geometry of the discs for distance0 (for the
+%                interpolation on the distance between two discs)
+%
+% Output:
+%   sigmaInterpPrecond - solution density for the BIE (organized by blocks)
+%   nGMRES - number of GMRES iterations needed to solve the linear system
+%
+% Optional output:
+%   tSolve - time taken to assemble and solve the problem
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 assert( ds.nGammas==1, 'Interpolation, preconditioning and compression only supported for two discs at this moment \n' );
 
-if( nargin < 5 )
-    matOffSetCoarse = zeros( (ds.gamma0.npt + sum(ds.listCoarseGammas(:).npt)) );
+% Determine if matrix is given, if not initialize it with zeros
+if( nargin < 6)
+    matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
+    matOffSetCoarse = sparse( ds.nBCoarse(end), ds.nBCoarse(end) );
 end
 
+% Determine if initial geometry is given, otherwise just use what we have
 if( nargin < 7 )
     geom0 = [];
     geom0.Rs = [0.75; 0.75];
@@ -27,11 +62,6 @@ opts = []; % Options for building off diagonal matrices with chunkie
 nBc = ds.nBCoarse;
 nB = ds.nB;
 
-if( nargin < 6)
-    matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
-    matOffSetCoarse = sparse( ds.nBCoarse(end), ds.nBCoarse(end) );
-end
-
 s = tic();
 % Interpolation part
 d = norm( ds.ctrs(:, 2) - ds.ctrs(:, 1)) - ds.Rs(1) - ds.Rs(2);
@@ -47,7 +77,6 @@ xDist = 2*(d - da)/(db - da) - 1;
 % Evaluate the interpolated R
 R_interpolated = rcip.evaluateRInterpolated(xDist, listPrecomputedR{kCh+1});
 
-
 % Build the system
 nRef = floor(ds.listGammas(1).nch/4 - 2);
 nRef = max(0, nRef);
@@ -61,8 +90,6 @@ bigEye = speye(NtotC);
 % Build the block diagonal matrix
 I0 = eye(ds.gamma0.npt);
 block_R = blkdiag(I0, R_interpolated);
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 % Build Kc matrix
@@ -101,15 +128,12 @@ for k=1:nGammas
             Kc(start_col:end_col, start_row:end_row) = Keval + matOffSetCoarse(start_col:end_col, start_row:end_row);
         end
     end
-end   
-%%%%%%%%%%%%%%%%%%%%%%%%
+end
 
 % Put the 3 matrices together
 Kc = bigEye + Kc*block_R;
 
 % Solve the linear system using GMRES
-
-
 [sigmaInterpPrecond, ~, ~, nGMRES] = gmres( Kc, rhsC, [], 1e-10, size(Kc,1) );
 t2 = toc(s);
 

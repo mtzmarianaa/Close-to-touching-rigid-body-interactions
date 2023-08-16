@@ -1,14 +1,50 @@
 function [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, plt, outopt)
-% Given the description of the geometry of nCircles solve the capacitance
-% problem. 
-% IN: ds : a discs object with the given geometry of the discs
-%        uk:  u defined at the boundary
-%        solveType: 'full' solves the full system, 'precond' solves the
-%                         precond full system, 'precondcomp' solves the precond compressed
-%                         system
-%        plt: boolean, wheather to plot or not
-% OUT:  q: charges on the n given discs
-%           sigma: on bundary density
+% *capacitanceProblem* solves the capacitance problem on non overlapping
+% identical discs. Depending on the arguments it solves the problem with a
+% different approach.
+%
+% Syntax: [q, sigma, nGMRES] = capacitanceProblem(ds, uk)
+%              [q, sigma, nGMRES] = capacitanceProblem(ds, uk, solveType)
+%              [q, sigma, nGMRES] = capacitanceProblem(ds, uk, solveType, plt)
+%              [q, sigma, nGMRES] = capacitanceProblem(ds, uk, solveType, outopt)
+%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk)
+%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType)
+%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType, plt)
+%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType, outopt)
+%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk)
+%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType)
+%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, plt)
+%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, outopt)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   uk - boundary information
+%
+% Optional input:
+%   solveType - which type of solver to use 
+%                                'full' solves the full system
+%                                'precond' solves the preconditioned full system
+%                                'precondcomp' solves the preconditioned compressed system
+%                                'interprecondcomp'solves the
+%                                preconditioned compressed system using
+%                                interpolation
+%   plt - boolean if the method should render plots or not
+%   outopt - output options for plotting
+%
+% Output:
+%   q - charges on each of the discs (constant per disc)
+%   sigma - solution density (organized by blocks)
+%   nGMRES - number of GMRES iterations used to solve the system
+%
+% Optional output:
+%   tSolve - time taken to assemble and solve the problem
+%   zztarg - solution for plotting outside the discs
+%   xxtarg - x coordinates for plotting outside the discs
+%   yytarg - y coordinates for plotting outside the discs
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 if(nargin < 3)
     solveType = 'full';
@@ -45,12 +81,12 @@ matOffSet = 0.5*eye(ds.chnkrs.npt);
 if strcmp(solveType, 'full') || strcmp(solveType, 'precond')
     % Build the rhs
     flagFunction = @(k, ds) dsc.flagnDisc(k, ds);
-    rhs = buildRHS_capacitance(ds, ds.listChnkrs, ds.nB, flagFunction, uk);
+    rhs = dsc.capc.buildRHS_capacitance(ds, ds.listChnkrs, ds.nB, flagFunction, uk);
     
 else
     % Build the rhs
     flagFunction = @(k, ds) dsc.flagnDiscCoarse(k, ds);
-    rhs = buildRHS_capacitance(ds, [ds.gamma0, ds.listCoarseGammas], ds.nBCoarse, flagFunction, uk);
+    rhs = dsc.capc.buildRHS_capacitance(ds, [ds.gamma0, ds.listCoarseGammas], ds.nBCoarse, flagFunction, uk);
     
     % Solve the system
     matOffSetCoarse = 0.5*eye(ds.nBCoarse(end));
@@ -77,13 +113,13 @@ if strcmp(solveType, 'interprecondcomp')
         pClose0(2).nBreakPoints = [10;10];
         if isfile('../+prc/listK22_invCapacitance.mat')
             load('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
-            [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+            listPrecomputedR_Capacitance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                 pClose0, listK22_invCapacitance);
             save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance.mat');
         else
-            listK22_invCapacitance = rcip.listK22_invCapacitance(geom0, pClose0);
+            listK22_invCapacitance = dsc.capc.listK22_invCapacitance(geom0, pClose0);
             save('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance.mat');
-            [listPrecomputedR_Capacitance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+            listPrecomputedR_Capacitance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                 pClose0, listK22_invCapacitance);
             save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
         end

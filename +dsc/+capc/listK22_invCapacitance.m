@@ -1,7 +1,29 @@
 function listK22_inv = listK22_invCapacitance(geom0, pClose0, nRefDist, kDist)
-% Computes the list of K22 inverses of two discs for the capacitance
-% problem (as the centers move closer and we dyadically refine on the
-% distance)
+% *listK22_invCapacitance* computes the list of $K_{22}^{-1}$ of two discs
+% for the capacitance problem. As discs move closer and closer together.
+%
+% Syntax: listK22_inv = listK22_invCapacitance(geom0, pClose0)
+%              listK22_inv = listK22_invCapacitance(geom0, pClose0, nRefDist)
+%              listK22_inv = listK22_invCapacitance(geom0, pClose0, nRefDist, kDist)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   geom0 - initial geometry of the discs for distance0 (for the
+%                interpolation on the distance between two discs)
+%   pClose0 - information of the close-to-toching region of the discs with
+%                   initial distance 
+%
+% Optional input:
+%   nRefDist - Number of chunks to use in the discretization for the distance
+%   kDist - number of discretization points to use for the distance
+%
+% Output:
+%   listK22_inv - list of inverses for the close-to-touching region,
+%                      $K_{22}^{-1}$ for different distances.
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 if(nargin<4)
     nRefDist = 28;

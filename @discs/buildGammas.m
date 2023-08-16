@@ -1,12 +1,50 @@
-function [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = buildGammas(geom, pClose, I, nDiscs)
-% Builds the list of gammas, the close to touching part. Also build
-% neisMapClose, the map for the neighbors. Not user friendly
+function [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = buildGammas(arg1, pClose, I, nDiscs)
+% *buildGammas* build the close-to-touching parts ($\Gamma_k$) for a collection of non
+% overlapping discs, $\Omega$. Makes use of the methods defined below
+%     plusReg = fanReg(alpha_0, theta)
+%     dist = dist_is(ctr_i, R_i, theta_ji, ctr_s, R_s, theta_ks)
+%
+% Syntax: [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = buildGamma0(ds)
+%              [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = buildGamma0(geom, pClose, I, nDiscs)
+%
+% Input:
+%   arg1 - either a discs object describing $\Omega$, collection of non overlapping discs or geom,
+%             the description of the geometry of such discs (centers, radii)
+%
+% Optional input:
+%   pClose - if arg1 is geom then this is the information regarding
+%                $\Gamma_k$, the close-to-touching region of the discs
+%   I  - matrix, each entry corresponds to geometric information of a
+%         $\Gamma_k$, the close-to-touching region of the discs
+%   nDiscs - number of discs
+%
+% Output:
+%   listGammas - a list of chnkr objects describing $\Gamma_k$ *in the fine mesh*
+%   neisMapClose - matrix describing the mapping for neighbors (useful when
+%                        defining $\Omega = \Gamma_0 \cup_{k>0} \Gamma_k$
+%   I_closeReg - matrix with geometric description of these
+%                        close-to-touching parts
+%   listCoarseGammas - a list of chnkr objects describing $\Gamma_k$ *in the coarse mesh*
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
+% Determine if arg1 is a discs object or if its geom
+if( isa(arg1, 'discs') && nargin < 2 )
+    geom = arg1.geom;
+    pClose = arg1.pClose;
+    I = arg1.I;
+    nDiscs = arg1.nDiscs;
+else
+    geom = arg1;
+end
+
+% Chunker preferences
 pref = chunkerpref();
 cparams = [];
 cparams.ta = -2*pi;
 cparams.tb = 4*pi;
 
+%Initialize
 nGammas = size(I, 1); % Number of close to touching parts
 listGammas(1, nGammas) = chunker(); % Initialize the list of chunker objects
 listCoarseGammas(1, nGammas) = chunker(); % Initialize the list of coarse chunker objects
@@ -24,9 +62,9 @@ for i=1:nDiscs
     nCloseT = nCloseT + 2*pClose(i).nClose;
 end
 
+
 % Start building
 for r=1:nGammas
-
     % For Di
     i = I(r, 1);
     currentInd_i = neisClose(i).currentInd;
@@ -69,7 +107,6 @@ for r=1:nGammas
     neisClose(i).map(t + 1, 1) = endPoints_i ;
     neisClose(i).map(t + 1, 2) = nEnd_i;
     neisClose(i).currentInd = neisClose(i).currentInd + 1;
-
 
     % Start building the part of gamma_r from Ds, add information to
     % neisClose(s)
@@ -122,6 +159,7 @@ end
 
 end
 
+%%
 
 function dist = dist_is(ctr_i, R_i, theta_ji, ctr_s, R_s, theta_ks)
 % Computes the minimum distance between disc i and disc s
@@ -149,7 +187,7 @@ alpha_0 = min(thetaReg/2, alpha_0);
 end
 
 
-
+%%
 function plusReg = fanReg(alpha_0, theta)
 
 L = log(pi/(6*alpha_0))/log(2);

@@ -1,14 +1,50 @@
 function [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, plt, outopt)
-% Given the description of the geometry of nCircles, solve the elastance
-% problem
-% IN: ds : a discs object with the given geometry of the discs
-%        qk:  charges on the n given discs
-%        solveType: 'full' solves the full system, 'precond' solves the
-%                         precond full system, 'precondcomp' solves the precond compressed
-%                         system
-%        plt: boolean, wheather to plot or not
-% OUT:  uk: u defined at the boundary
-%           sigma: on bundary density
+% *elastanceProblem* solves the elastance problem on non overlapping
+% identical discs. Depending on the arguments it solves the problem with a
+% different approach.
+%
+% Syntax: [uk, sigma, nGMRES] = elastanceProblem(ds, qk)
+%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType)
+%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType, plt)
+%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType, outopt)
+%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk)
+%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType)
+%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType, plt)
+%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType, outopt)
+%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk)
+%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType)
+%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, plt)
+%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, outopt)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   qk - boundary information (charge on the discs)
+%
+% Optional input:
+%   solveType - which type of solver to use 
+%                                'full' solves the full system
+%                                'precond' solves the preconditioned full system
+%                                'precondcomp' solves the preconditioned compressed system
+%                                'interprecondcomp'solves the
+%                                preconditioned compressed system using
+%                                interpolation
+%   plt - boolean if the method should render plots or not
+%   outopt - output options for plotting
+%
+% Output:
+%   uk - solution on the discs (organized by blocks)
+%   sigma - solution density (organized by blocks)
+%   nGMRES - number of GMRES iterations used to solve the system
+%
+% Optional output:
+%   tSolve - time taken to assemble and solve the problem
+%   zztarg - solution for plotting outside the discs
+%   xxtarg - x coordinates for plotting outside the discs
+%   yytarg - y coordinates for plotting outside the discs
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 if(nargin < 3)
     solveType = 'full';
@@ -38,7 +74,7 @@ nDiscs = length(qk); % Number of discs
 ctrs = ds.ctrs;
 
 flagFunction = @(k, ds) dsc.flagnDisc(k, ds);
-M = dsc.buildMelastance(ds, ds.listChnkrs, ds.nB, flagFunction);
+M = dsc.elst.buildMelastance(ds, ds.listChnkrs, ds.nB, flagFunction);
 kern = @(s,t) krns.DL_kern(s,t);
 matOffSet = 0.5*eye(ds.chnkrs.npt) + M;
 
@@ -47,20 +83,20 @@ matOffSet = 0.5*eye(ds.chnkrs.npt) + M;
 if strcmp(solveType, 'full') || strcmp(solveType, 'precond')
 
     % Complete building the rhs 
-    rhs = buildRHS_elastance(ds, ds.listChnkrs, ds.nB, flagFunction, qk);
+    rhs = dsc.elst.buildRHS_elastance(ds, ds.listChnkrs, ds.nB, flagFunction, qk);
 else
     flagFunctionCoarse = @(k, ds) dsc.flagnDiscCoarse(k, ds);
-    MCoarse = dsc.buildMelastance(ds, [ds.gamma0, ds.listCoarseGammas] , ds.nBCoarse, flagFunctionCoarse);
+    MCoarse = dsc.elst.buildMelastance(ds, [ds.gamma0, ds.listCoarseGammas] , ds.nBCoarse, flagFunctionCoarse);
     matOffSetCoarse = 0.5*eye(ds.nBCoarse(end)) + MCoarse;
 
     % Build the rhs
-    rhs = buildRHS_elastance(ds, [ds.gamma0, ds.listCoarseGammas] , ds.nBCoarse, flagFunctionCoarse, qk);
+    rhs = dsc.elst.buildRHS_elastance(ds, [ds.gamma0, ds.listCoarseGammas] , ds.nBCoarse, flagFunctionCoarse, qk);
     
 end
 
 % Save nu in the fine discretization if we need to plot
 if(plt)
-    [~, nu] = buildRHS_elastance(ds, ds.listChnkrs, ds.nB, flagFunction, qk);
+    [~, nu] = dsc.elst.buildRHS_elastance(ds, ds.listChnkrs, ds.nB, flagFunction, qk);
 end
 
 % See if we have the correct files for the interpolation
@@ -84,13 +120,13 @@ if strcmp(solveType, 'interprecondcomp')
         pClose0(2).nBreakPoints = [10;10];
         if isfile('../+prc/listK22_invElastance.mat')
             load('../+prc/listK22_invElastance.mat', 'listK22_invElastance');
-            [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+            listPrecomputedR_Elastance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                 pClose0, listK22_invElastance);
             save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance.mat');
         else
-            listK22_invElastance = rcip.listK22_invElastance(geom0, pClose0);
+            listK22_invElastance = dsc.elst.listK22_invElastance(geom0, pClose0);
             save('../+prc/listK22_invElastance.mat', 'listK22_invElastance.mat');
-            [listPrecomputedR_Elastance, ~] = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
+            listPrecomputedR_Elastance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
                 pClose0, listK22_invElastance);
             save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
         end

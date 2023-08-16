@@ -1,6 +1,39 @@
 function [sigmaPrecondComp, nGMRES, tSolve] = solvePrecondComp( ds, rhsC, kernel, matOffSet, matOffSetCoarse, listKs_inv, listP, listR )
-% Solve the BIE for K*sigma = rhs FULLY, with preconditioning AND compressing
-% Also outputs the number of GMRES iterations needed to solve the problem
+% *solvePrecondComp* solve the BIE for K*sigma = rhs. Solves the compressed
+% and preconditioned system. 
+% Solves the linear system with GMRES. Also outputs number of GMRES 
+% iterations needed to solve the problem. 
+% Could output time taken to assemble and solve the problem.
+%
+% Syntax: [sigmaInterpPrecond, nGMRES, tSolve] = solvePrecondComp(ds, rhsC, kernel)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solvePrecondComp(ds, rhsC, kernel, matOffSet, matOffSetCoarse)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solvePrecondComp(ds, rhsC, kernel, matOffSet, matOffSetCoarse,  listKs_inv, listP, listR)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   rhsC - right hand side of the BIE (compressed)
+%   kernel - kernel object (from chunkie) or function handle definind the
+%                kernel to use
+%
+% Optional input:
+%   matOffSet - matrix defining the integral operator in the fine mesh which is not a kernel
+%                        (has to be a matrix)
+%   matOffSetCoarse - matrix defining the integral operator in the coarse mesh which is not a kernel
+%                        (has to be a matrix)
+%   listKs_inv - list of inverses for the close-to-touching region
+%   listP - list of prolongation matrices
+%   listR - list of R matrices for the RCIP method
+%
+% Output:
+%   sigmaPrecondComp - solution density for the BIE (organized by blocks)
+%   nGMRES - number of GMRES iterations needed to solve the linear system
+%
+% Optional output:
+%   tSolve - time taken to assemble and solve the problem
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 % Options for on boundary evaluations
 opts2 = [];

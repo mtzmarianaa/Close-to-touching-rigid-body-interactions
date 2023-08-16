@@ -1,7 +1,29 @@
-function [listPrecomputedR, uDist] = buildPrecomputedR_twoDiscs(geom0, pClose0, listK22_inv, nRefDist, kDist)
-% Builds the precomputed Rs for different distances and saves them into a
-% cell array listPrecomputedR. uDist is the matrix which maps function values at 
-% k Legendre nodes to the corresponding coefficients
+function [listPrecomputedR] = buildPrecomputedR_twoDiscs(geom0, pClose0, listK22_inv, nRefDist, kDist)
+% *buildPrecomputedR_twoDiscs* builds the precomputed R matrix for
+% different distances and saves them into a cell array. 
+%
+% Syntax: buildPrecomputedR_twoDiscs(geom0, pClose0, listK22_inv)
+%              buildPrecomputedR_twoDiscs(geom0, pClose0, listK22_inv, nRefDist)
+%              buildPrecomputedR_twoDiscs(geom0, pClose0, listK22_inv, nRefDist, kDist)
+%
+% Input:
+%   geom0 - initial geometry of the discs for distance0 (for the
+%                interpolation on the distance between two discs)
+%   pClose0 - information of the close-to-toching region of the discs with
+%                   initial distance 
+%   listK22_inv - list of inverses for the close-to-touching region,
+%                      $K_{22}^{-1}$ for different distances.
+%
+% Optional input:
+%   nRefDist - Number of chunks to use in the discretization for the distance
+%   kDist - number of discretization points to use for the distance
+%
+% Output:
+%   listPrecomputedR - list of precomputed R matrices for desired
+%                                 distances.
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
+
 
 if(nargin<4)
     nRefDist = 28;
@@ -20,7 +42,7 @@ breakPoints_dist = geom0.Rs(1) + 1./2.^ks*( norm(geom0.ctrs(:, 1) - geom0.ctrs(:
 cHat2 = ( geom0.ctrs(:,2) - geom0.ctrs(:,1))./( norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) )*breakPoints_dist + geom0.ctrs(:, 1);
 
 % For the Legendre nodes for the distances
-[xDist , ~ , uDist , ~] = lege.exps(kDist);
+xDist= lege.exps(kDist);
 
 % Initialize the cell array and the cell item
 listPrecomputedR = cell(1, nRefDist);

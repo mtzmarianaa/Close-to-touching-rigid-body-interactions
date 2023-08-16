@@ -1,6 +1,26 @@
 function [rhs_elastance, nu] = buildRHS_elastance(ds, listChunkers, nB, flagFunction, qk)
-% Build the rhs to solve the elastance problem. Depending on the arguments
-% given it can build the rhs for the fine or the coarse discretizations
+% *buildRHS_capacitance* builds the right hand side of the BIE for the
+% capacitance problem. Depending on the input given it can build the RHS
+% for the fine of the coarse discretizations.
+%
+% Syntax: rhs_capacitance = buildRHS_capacitance(ds, listChunkers, nB, flagFunction, uk)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   listChunkers - list of chunks of the geometry to use (either fine or
+%                          coarse chunks on ds)
+%   nB - stops for the chunks
+%   flagFunction - function handle, which flag function to use - either flagnDisc or
+%                          flagnDiscCoarse
+%   qk - boundary data
+%
+% Output:
+%   rhs_capacitance - rhs for the BIE (organized by blocks)
+%   nu - $\nu$ in the elastance problem
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 
 Ntot = nB(end);

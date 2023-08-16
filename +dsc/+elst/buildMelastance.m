@@ -1,11 +1,25 @@
 function M = buildMelastance(ds, listChunkers, nB, flagFunction)
-% Builds the M function necessary for the elastance problem. Depending on
-% the arguments given it can build either the M for the fine discretization
-% or the M for the coarse discreatization.
-% Build the block diagonal matrix M (note that here we don't care about the
-% order of the discs, just the order of the chunker objects - order of
-% either discs (if no close information) or the order of gammas (if close
-% information)
+% *buildMelastance* builds the M matrix necessary for the elastanec
+% problem. Depending on the input given it can build either the M for the
+% fine discretization or the M for the coarse mesh. This is a block
+% diagonal matrix.
+%
+% Syntax: M = buildMelastance(ds, listChunkers, nB, flagFunction)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   listChunkers - list of chunks of the geometry to use (either fine or
+%                          coarse chunks on ds)
+%   nB - stops for the chunks
+%   flagFunction - function handle, which flag function to use - either flagnDisc or
+%                          flagnDiscCoarse
+%
+% Output:
+%   M - (ds.chnkrs.npt, ds.chnkrs.npt) M matrix
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 Ntot = nB(end);
 nDiscs = ds.nDiscs;

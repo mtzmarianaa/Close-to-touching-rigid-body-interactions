@@ -1,11 +1,16 @@
 classdef discs
-    % DISCS class which describes ndiscs non overlapping with same radius, 
-    % different centers. They are represented by their values of its
-    % position, first and second derivatives in parameters space
-    % Since we also need to compute the arclength of those chunks we also
-    % save the parametrizations
+    % *discs* class which describes $N_{\Omega}=$nDiscs non overlaping
+    % collection of discs with same radius but different centers. They are
+    % represented by their values of their position, first and second
+    % derivatives in parameter space. $\Gamma_k$ represent the
+    % close-to-touching parts of the discs (if any) and $\Gamma_0$ is the
+    % far region of the discs. Each close-to-toching region is represented
+    % in both the coarse and fine mesh (necessary for the rcip method). 
     %
-    % Author: Mariana Martinez
+    % To do: automatization of process of finding the close-to-toching
+    % region, make this more user friendly
+    %
+    % author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
     properties(Access = public)
         ctrs % center of the discs
@@ -26,6 +31,11 @@ classdef discs
         indGammas % if close to touching information given, this is the index where gamma_i starts
         nB % limits for the K matrix
         nBCoarse % limits for the Kc matrix
+    end
+
+    properties(SetAccess = private)
+        geom
+        pClose
     end
 
     methods
@@ -94,19 +104,22 @@ classdef discs
             Rs = 0.75*ones(1, nDiscs); % all discs with same radii = 0.75 (NEVER USE 1)
             nBreakPoints = 10*ones(1, nDiscs);
 
-            if isfield(geom, 'Rs')
-                % No field for radii, standard option
+            if isfield(geom, 'Rs') 
                 Rs = geom.Rs;
+                if( length(Rs) < nDiscs )
+                    Rs = Rs*ones(1, nDiscs);
+                end
             end
             if isfield(geom, 'nBreakPoints')
-                % No field for number of breakpoints, standard option
                 nBreakPoints = geom.nBreakPoints;
                 if( size(geom.nBreakPoints, 2) < nDiscs)
-                    % If number of breakpoints is not correct, set all discs
-                    % with the same radius
                     nBreakPoints = geom.nBreakPoints(1)*ones(1, nDiscs);
                 end
             end
+
+            obj.geom = geom;
+            obj.pClose = pClose;
+            obj.nDiscs = nDiscs;
 
             listGammas = [];
             listCoarseGammas = [];
@@ -149,15 +162,17 @@ classdef discs
                 end
 
                 % Sort pClose, calculate amount of gammas and build I
-                [I, nGammas, pClose] = dsc.buildI(pClose, nDiscs);
+                [I, nGammas, pClose] = buildI(obj);
+                obj.I = I;
+                obj.pClose = pClose; % Update
 
                 % Build list for gammas, close to touching interactiong and
                 % the map for the neighbors
-                [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = dsc.buildGammas(geom, pClose, I, nDiscs);
+                [listGammas, neisMapClose, I_closeReg, listCoarseGammas] = buildGammas(obj);
                 chnkrsGammas = merge(listGammas);
 
                 % Build gamma0, neisMapFar, listFarChunks
-                [gamma0, neisMapFar, listFarChunks] = dsc.buildGamma0(geom, pClose, I, nDiscs);
+                [gamma0, neisMapFar, listFarChunks] = buildGamma0(obj);
 
                 % Add the missing neis
                 indMissingClose = find(~chnkrsGammas.adj);

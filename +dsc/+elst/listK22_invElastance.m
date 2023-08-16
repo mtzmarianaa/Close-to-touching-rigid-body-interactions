@@ -1,7 +1,29 @@
 function listK22_inv = listK22_invElastance(geom0, pClose0, nRefDist, kDist)
-% Computes the list of K22 inverses of two discs for the elastance
-% problem (as the centers move closer and we dyadically refine on the
-% distance)
+% *listK22_invCapacitance* computes the list of $K_{22}^{-1}$ of two discs
+% for the elastance problem. As discs move closer and closer together.
+%
+% Syntax: listK22_inv = listK22_invElastance(geom0, pClose0)
+%              listK22_inv = listK22_invElastance(geom0, pClose0, nRefDist)
+%              listK22_inv = listK22_invElastance(geom0, pClose0, nRefDist, kDist)
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   geom0 - initial geometry of the discs for distance0 (for the
+%                interpolation on the distance between two discs)
+%   pClose0 - information of the close-to-toching region of the discs with
+%                   initial distance 
+%
+% Optional input:
+%   nRefDist - Number of chunks to use in the discretization for the distance
+%   kDist - number of discretization points to use for the distance
+%
+% Output:
+%   listK22_inv - list of inverses for the close-to-touching region,
+%                      $K_{22}^{-1}$ for different distances.
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 if(nargin<4)
     nRefDist = 28;
@@ -49,7 +71,7 @@ for i=1:nRefDist
         geom.ctrs(:, 2) = cInter(:, j); % New center
         ds = discs(geom, pClose0);
         nB = [0, ds.listGammas(1).npt];
-        M = dsc.buildMelastance(ds, ds.listGammas, nB, flagFunction);
+        M = buildMelastance(ds, ds.listGammas, nB, flagFunction);
         matOffSet = 0.5*eye(ds.listGammas(1).npt) + M;
         K22 = chunkermat(ds.listGammas(1), kern, opts2) + matOffSet;
         listK22_inv{(i-1)*kDist + j} = inv(K22);

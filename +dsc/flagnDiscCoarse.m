@@ -1,5 +1,22 @@
 function [flag] = flagnDiscCoarse(i, ds)
-% Same as flanDisc but for the coarse discretization
+% *flagnDiscCoarse* given a discs object outputs a sparse boolean vector such
+% that it indicates which chunk on ds is on the i-th disc. Works only on
+% the coarse mesh. See flagnDisc if interested on the fine mesh.
+%
+% Syntax: [flag] = flagnDiscCoarse(i, ds)
+%
+% Input:
+%   i - index of discs we care about
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%
+% Output:
+%   flag - (ds.gamma0.nch + sum( ds.listCoarseGammas(:).nch ); , 1) 
+%            sparse boolean matrix, 0 if that chunk is
+%            not on disc i, 1 if it is on disc i
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 assert(ds.infoClose, 'No information about a coarse and fine discretization of the discs');
 

@@ -1,7 +1,21 @@
 function [flag] = flagnDisc(i, ds)
-% Given a discs object outputs a sparse boolean vector such that 
-% it indicates which chunk on ds is on the i-th disc. For the fine
-% discretization
+% *flagnDisc* given a discs object outputs a sparse boolean vector such
+% that it indicates which chunk on ds is on the i-th disc. Works only on
+% the fine mesh. See flagnDiscCoarse if interested on the coarse mesh.
+%
+% Syntax: [flag] = flagnDisc(i, ds)
+%
+% Input:
+%   i - index of discs we care about
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%
+% Output:
+%   flag - (ds.chnkrs.nch , 1) sparse boolean matrix, 0 if that chunk is
+%            not on disc i, 1 if it is on disc i
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 assert( i <= ds.nDiscs, 'Not enough discs on ds for this request' )
 

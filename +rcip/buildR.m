@@ -1,5 +1,26 @@
 function [R, G] = buildR(chunkerCoarse, chunkerFine, K22_inv, P,  kernel)
-% Build the matrix    R = (W−1c )*( P' )*( Wf )*(  K22−1 )*( P )
+% *buildR* build the matrix for RCIP 
+% $$R = W_c^{-1} P' W_f K_{22}^{-1} P. $$
+%
+% Syntax: R = buildR(chunkerCoarse, chunkerFine)
+%              R = buildR(chunkerCoarse, chunkerFine, K22_inv, P,  kernel)
+%              [R, G] = buildR(chunkerCoarse, chunkerFine)
+%              [R, G] = buildR(chunkerCoarse, chunkerFine, K22_inv, P,  kernel)
+%
+% Input:
+%   chunkerCoarse - chunker object describing the coarse discretization
+%   chunkerFine - chunker object describing the fine discretization
+%
+% Optional input:
+%   K22_inv - inverse for the close-to-touching region
+%   P - prolongation matrix
+%   kernel - kernel to use in the BIE
+%
+% Output:
+%   R - $R = W_c^{-1} P' W_f K_{22}^{-1} P. $
+%   G - $G = W_c^{-1} P' W_f. $
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 % We need Wc, Wf, P, K22
 Wc = weights(chunkerCoarse);

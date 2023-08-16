@@ -1,6 +1,32 @@
 function [sigmaFull, nGMRES, tSolve] = solveFull( ds, rhs, kernel, matOffSet )
-% Solve the BIE for K*sigma = rhs FULLY, no preconditioning or compressing
-% Also outputs the number of GMRES iterations needed to solve the problem
+% *solveFull* solve the BIE for K*sigma = rhs. Solves the full
+% problem as stated. Solves the linear system with
+% GMRES. Also outputs number of GMRES iterations needed to solve the
+% problem. Could output time taken to assemble and solve the problem.
+%
+% Syntax: [sigmaFull, nGMRES] = solveFull( ds, rhs, kernel, matOffSet )
+%              [sigmaFull, nGMRES, tSolve] = solveFull( ds, rhs, kernel, matOffSet )
+%
+% Input:
+%   ds - discs object, has all the geometric properties of the collection
+%          of non overlapping discs, their close-to-touching regions and their far
+%          regions.
+%   rhs - right hand side of the BIE
+%   kernel - kernel object (from chunkie) or function handle definind the
+%                kernel to use
+%
+% Optional input:
+%   matOffSet - matrix defining the integral operator which is not a kernel
+%                        (has to be a matrix)
+%
+% Output:
+%   sigmaFull - solution density for the BIE (organized by blocks)
+%   nGMRES - number of GMRES iterations needed to solve the linear system
+%
+% Optional output:
+%   tSolve - time taken to assemble and solve the problem
+%
+% author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
 
 if( nargin < 3)
