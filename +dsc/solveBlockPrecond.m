@@ -1,4 +1,4 @@
-function [sigmaBlockPrecond, nGMRES, tSolve] = solveBlockPrecond( ds, rhs, kernel, matOffSet )
+function [sigmaBlockPrecond, nGMRES, tSolve] = solveBlockPrecond( ds, rhs, kernel, matOffSet, verbose)
 % *solveBlockPrecond* solve the BIE for K*sigma = rhs. Solves the full
 % problem using a right preconditioner. Solves the linear system with
 % GMRES. Also outputs number of GMRES iterations needed to solve the
@@ -18,6 +18,7 @@ function [sigmaBlockPrecond, nGMRES, tSolve] = solveBlockPrecond( ds, rhs, kerne
 % Optional input:
 %   matOffSet - matrix defining the integral operator which is not a kernel
 %                        (has to be a matrix)
+%   verbose - true or false, if print reassuring statements
 %
 % Output:
 %   sigmaBlockPrecond - solution density for the BIE (organized by blocks)
@@ -28,13 +29,23 @@ function [sigmaBlockPrecond, nGMRES, tSolve] = solveBlockPrecond( ds, rhs, kerne
 %
 % author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
+if( isa(kernel, 'kernel') )
+    kEval = @(s,t) kernel.eval(s,t);
+else
+    kEval = @(s,t) kernel(s,t);
+end
+
+if(nargin<5)
+    verbose = true;
+end
+
 % Determine if matrix is given, if not initialize it with zeros
 if( nargin < 3)
     matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
 end
 s = tic();
 % Build the matrix, inverses are required in this case
-[K_full, listKs_inv] = dsc.buildFullK(ds, kernel, matOffSet);
+[K_full, listKs_inv] = dsc.buildFullK(ds, kEval, matOffSet);
 % Build sparse diagonal block with inverses
 I0 = eye(ds.gamma0.npt);
 block_inv = blkdiag(I0, listKs_inv{:});
@@ -46,8 +57,10 @@ nGMRES = nGMRES(2);
 sigmaBlockPrecond = block_inv*sigmaBlockPrecond;
 
 [m,n] = size(K_precond);
+if(verbose)
 fprintf("\n\n\nNEW GMRES SOLVE BLOCK PRECOND \n\n     %5.2e  time solve  \n     " + ...
     "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(K_precond));
+end
 
 if(nargout > 2)
     tSolve = t2;

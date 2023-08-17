@@ -69,13 +69,18 @@ if ~isfield(outopt, 'nplot')
     outopt.nplot = 250;
 end
 
+verbose = true;
+if isfield(outopt, 'verbose')
+    verbose = outopt.verbose;
+end
+
 
 nDiscs = length(qk); % Number of discs
 ctrs = ds.ctrs;
 
 flagFunction = @(k, ds) dsc.flagnDisc(k, ds);
 M = dsc.elst.buildMelastance(ds, ds.listChnkrs, ds.nB, flagFunction);
-kern = @(s,t) krns.DL_kern(s,t);
+kern = kernel('lap', 'd');
 matOffSet = 0.5*eye(ds.chnkrs.npt) + M;
 
 % Build according to preferences
@@ -138,13 +143,13 @@ end
 % Solve according to preferences
 
 if strcmp(solveType, 'full')
-    [sigma, nGMRES, tS] = dsc.solveFull(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveFull(ds, rhs, kern, matOffSet, verbose);
 elseif strcmp(solveType, 'precond')
-    [sigma, nGMRES, tS] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet, verbose);
 elseif strcmp(solveType, 'precondcomp')
-    [sigma, nGMRES, tS] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse, 0, 0, 0, verbose);
 elseif strcmp(solveType, 'interprecondcomp')
-    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Elastance, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Elastance, matOffSet, matOffSetCoarse, 0, verbose);
 end
 
 
@@ -232,7 +237,9 @@ if( nargout > 4 )
     s = tic; 
     in = chunkerinterior(ds.chnkrs , targets ); 
     t3 = toc(s);
+    if(verbose)
     fprintf('%5.2e s : time to find points off surface\n',t3)
+    end
     
     % Evaluate points off surface
     DL_kern = @(s,t) krns.DL_kern(s,t);
@@ -241,7 +248,9 @@ if( nargout > 4 )
     Dsol_elastance = chunkerkerneval(ds.chnkrs , DL_kern,  sigma , targets(:,~in));
     Dsol_elastance = Dsol_elastance + chunkerkerneval(ds.chnkrs, SL_kern, nu, targets(:, ~in));
     t4 = toc(s);
+    if(verbose)
     fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t4);
+    end
     
     % Add the off surface evaluations
     zztarg = nan(size(xxtarg));

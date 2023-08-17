@@ -1,4 +1,4 @@
-function [sigmaPrecondComp, nGMRES, tSolve] = solvePrecondComp( ds, rhsC, kernel, matOffSet, matOffSetCoarse, listKs_inv, listP, listR )
+function [sigmaPrecondComp, nGMRES, tSolve] = solvePrecondComp( ds, rhsC, kernel, matOffSet, matOffSetCoarse, listKs_inv, listP, listR, verbose)
 % *solvePrecondComp* solve the BIE for K*sigma = rhs. Solves the compressed
 % and preconditioned system. 
 % Solves the linear system with GMRES. Also outputs number of GMRES 
@@ -8,6 +8,7 @@ function [sigmaPrecondComp, nGMRES, tSolve] = solvePrecondComp( ds, rhsC, kernel
 % Syntax: [sigmaInterpPrecond, nGMRES, tSolve] = solvePrecondComp(ds, rhsC, kernel)
 %              [sigmaInterpPrecond, nGMRES, tSolve] = solvePrecondComp(ds, rhsC, kernel, matOffSet, matOffSetCoarse)
 %              [sigmaInterpPrecond, nGMRES, tSolve] = solvePrecondComp(ds, rhsC, kernel, matOffSet, matOffSetCoarse,  listKs_inv, listP, listR)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solvePrecondComp(ds, rhsC, kernel, matOffSet, matOffSetCoarse,  listKs_inv, listP, listR, verbose)
 %
 % Input:
 %   ds - discs object, has all the geometric properties of the collection
@@ -25,6 +26,7 @@ function [sigmaPrecondComp, nGMRES, tSolve] = solvePrecondComp( ds, rhsC, kernel
 %   listKs_inv - list of inverses for the close-to-touching region
 %   listP - list of prolongation matrices
 %   listR - list of R matrices for the RCIP method
+%   verbose - true or false, if print reassuring statements
 %
 % Output:
 %   sigmaPrecondComp - solution density for the BIE (organized by blocks)
@@ -34,6 +36,16 @@ function [sigmaPrecondComp, nGMRES, tSolve] = solvePrecondComp( ds, rhsC, kernel
 %   tSolve - time taken to assemble and solve the problem
 %
 % author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
+
+if( isa(kernel, 'kernel') )
+    kEval = @(s,t) kernel.eval(s,t);
+else
+    kEval = @(s,t) kernel(s,t);
+end
+
+if(nargin<9)
+    verbose = true;
+end
 
 % Options for on boundary evaluations
 opts2 = [];
@@ -53,12 +65,12 @@ if( nargin < 5)
 end
 s = tic();
 % Build the inverses and the R matrices if needed
-if( nargin < 6 )
+if( nargin < 6 || length(listKs_inv(:)) ==1 || length(listP(:))==1 || length(listR(:)) == 2 )
     listKs_inv = cell(1, ds.nGammas);
     listP = cell(1, ds.nGammas);
     listR = cell(1, ds.nGammas);
     for i =1:nGammas
-        K22 = chunkermat(ds.listGammas(i), kernel, opts2);
+        K22 = chunkermat(ds.listGammas(i), kEval, opts2);
         K22_inv = inv(  K22 + matOffSet( (nB(i+1)+1):nB(i+2),  (nB(i+1)+1):nB(i+2) ) );
         listKs_inv{i} = K22_inv;
         nRef = floor(ds.listGammas(i).nch/4 - 2);
@@ -66,14 +78,14 @@ if( nargin < 6 )
         P = rcip.prol_dyadic(ds.listCoarseGammas(i).k, nRef);
         P = blkdiag(P, P);
         listP{i} = P;
-        listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), K22_inv, P, kernel);
+        listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), K22_inv, P, kEval);
     end
 end
 
 if( nargin < 8 )
     listR = cell(1, ds.nGammas);
         for i =1:nGammas
-            listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), listKs_inv{i}, listP{i}, kernel);
+            listR{i} = rcip.buildR(ds.listCoarseGammas(i), ds.listGammas(i), listKs_inv{i}, listP{i}, kEval);
         end
 end
 
@@ -92,16 +104,16 @@ blockProlongation = blkdiag(I0, listP{:});
 Kc = zeros( NtotC );
 
 % First block
-K11 = chunkermat( ds.gamma0, kernel, opts2) + matOffSet(1:nB(2), 1:nB(2));
+K11 = chunkermat( ds.gamma0, kEval, opts2) + matOffSet(1:nB(2), 1:nB(2));
 K11 = K11 - eye(size(K11));
 Kc(1:nB(2), 1:nB(2)) = K11;
 % Build the first row and column of the Kc matrix
 for i=2:nChunkers
     targ = reshape( ds.listCoarseGammas(i-1).r, 2, []);
-    rowBlock = chunkerkernevalmat( ds.gamma0, kernel, targ, opts  );
+    rowBlock = chunkerkernevalmat( ds.gamma0, kEval, targ, opts  );
     Kc(  (nBc(i)+1):nBc(i+1), 1:nB(2)  ) = rowBlock + matOffSetCoarse(  (nBc(i)+1):nBc(i+1), 1:nB(2)  );
     targGamma0 = reshape( ds.gamma0.r, 2, [] );
-    columnBlock = chunkerkernevalmat( ds.listCoarseGammas(i-1), kernel, targGamma0, opts );
+    columnBlock = chunkerkernevalmat( ds.listCoarseGammas(i-1), kEval, targGamma0, opts );
     Kc( 1:nB(2), (nBc(i)+1):nBc(i+1) ) = columnBlock + matOffSetCoarse( 1:nB(2), (nBc(i)+1):nBc(i+1) );
 end
 
@@ -120,7 +132,7 @@ for k=1:nGammas
         if(i ~= k)
             % off boundary, else its just zeros and we don't need to
             % compute anything
-            Keval = chunkerkernevalmat(chnkri, kernel, targ, opts);
+            Keval = chunkerkernevalmat(chnkri, kEval, targ, opts);
             Kc(start_col:end_col, start_row:end_row) = Keval + matOffSetCoarse(start_col:end_col, start_row:end_row);
         end
     end
@@ -137,9 +149,10 @@ Kc = bigEye + Kc*block_R;
 t2 = toc(s);
 
 [m,n] = size(Kc);
+if(verbose)
 fprintf("\n\n\nNEW GMRES SOLVE BLOCK PRECOND COMPR \n\n     %5.2e  time solve  \n     " + ...
     "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(Kc));
-
+end
 nGMRES = nGMRES(2);
 
 % Get sigma in the fine discretization

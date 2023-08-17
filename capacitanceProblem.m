@@ -70,11 +70,15 @@ if ~isfield(outopt, 'nplot')
     outopt.nplot = 250;
 end
 
+verbose = true;
+if isfield(outopt, 'verbose')
+    verbose = outopt.verbose;
+end
 
 n = length(uk);
 ctrs = ds.ctrs;
 
-kern = @(s,t) krns.DLplusSL(s,t);
+kern = kernel('lap', 'c');
 matOffSet = 0.5*eye(ds.chnkrs.npt);
 
 % Build according to preferences
@@ -129,13 +133,13 @@ end
 
 % Solve according to preferences
 if strcmp(solveType, 'full')
-    [sigma, nGMRES, tS] = dsc.solveFull(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveFull(ds, rhs, kern, matOffSet, verbose);
 elseif strcmp(solveType, 'precond')
-    [sigma, nGMRES, tS] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet);
+    [sigma, nGMRES, tS] = dsc.solveBlockPrecond(ds, rhs, kern, matOffSet, verbose);
 elseif strcmp(solveType, 'precondcomp')
-    [sigma, nGMRES, tS] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse, 0, 0, 0, verbose);
 elseif strcmp(solveType, 'interprecondcomp')
-    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Capacitance, matOffSet, matOffSetCoarse);
+    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Capacitance, matOffSet, matOffSetCoarse, 0, verbose);
 end
 
 
@@ -154,7 +158,9 @@ for i=1:n
     sigma_i = sigma;
     sigma_i(~flag_points) = 0; % Set all to zero if not in disc, so we just get values from the discs
     q(i) = chunkerintegral(ds.chnkrs, sigma_i, opts);
+    if(verbose)
     fprintf("%5.5e : charge at disk %1.0e with GMRES\n\n", q(i), i);
+    end
 end
 
 if(nargout > 3)
@@ -240,14 +246,19 @@ if( nargout > 4 )
     s = tic; 
     in = chunkerinterior(ds.chnkrs , targets ); 
     t3 = toc(s);
+    if(verbose)
     fprintf('%5.2e s : time to find points off surface\n',t3)
+    end
     
     % Evaluate points off surface
-    DLplusSL = @(s,t) krns.DLplusSL(s,t);
+    DLplusSL = kernel('lap', 'c');
     s = tic;
+    %Dsol_capacitance = DLplusSL.fmm(1e-12, ds.chnkrs, targets(:,~in), sigma);
     Dsol_capacitance = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma , targets(:,~in)); 
     t4 = toc(s);
+    if(verbose)
     fprintf('%5.2e s : time for kerneval (adaptive for near)\n',t4);
+    end
     
     % Add the off surface evaluations
     zztarg = nan(size(xxtarg));

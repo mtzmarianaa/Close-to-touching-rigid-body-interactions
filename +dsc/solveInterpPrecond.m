@@ -1,4 +1,4 @@
-function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0)
+function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0, verbose)
 % *solveInterpPrecond* solve the BIE for K*sigma = rhs. Solves the compressed,
 % preconditioned system using interpolation from precomputed matrices. 
 % Solves the linear system with GMRES. Also outputs number of GMRES 
@@ -8,6 +8,7 @@ function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, ker
 % Syntax: [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR)
 %              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse)
 %              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0, verbose)
 %
 % Input:
 %   ds - discs object, has all the geometric properties of the collection
@@ -25,6 +26,7 @@ function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, ker
 %                        (has to be a matrix)
 %   geom0 - initial geometry of the discs for distance0 (for the
 %                interpolation on the distance between two discs)
+%   verbose - true or false, if print reassuring statements
 %
 % Output:
 %   sigmaInterpPrecond - solution density for the BIE (organized by blocks)
@@ -35,19 +37,30 @@ function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, ker
 %
 % author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
-assert( ds.nGammas==1, 'Interpolation, preconditioning and compression only supported for two discs at this moment \n' );
+%assert( ds.nGammas==1, 'Interpolation, preconditioning and compression only supported for two discs at this moment \n' );
+
+if( isa(kernel, 'kernel') )
+    kEval = @(s,t) kernel.eval(s,t);
+else
+    kEval = @(s,t) kernel(s,t);
+end
+
 
 % Determine if matrix is given, if not initialize it with zeros
-if( nargin < 6)
+if( nargin < 6 || length(matOffSet(:)) ==1 || length(matOffSetCoarse(:)) == 1) 
     matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
     matOffSetCoarse = sparse( ds.nBCoarse(end), ds.nBCoarse(end) );
 end
 
 % Determine if initial geometry is given, otherwise just use what we have
-if( nargin < 7 )
+if( nargin < 7 || ~isstruct(geom0) )
     geom0 = [];
     geom0.Rs = [0.75; 0.75];
     geom0.ctrs = [0  1.6; 0 0];
+end
+
+if(nargin < 8)
+    verbose = true;
 end
 
 % Options for on boundary evaluations
@@ -96,16 +109,16 @@ block_R = blkdiag(I0, R_interpolated);
 Kc = zeros( NtotC );
 
 % First block
-K11 = chunkermat( ds.gamma0, kernel, opts2) + matOffSet(1:nB(2), 1:nB(2));
+K11 = chunkermat( ds.gamma0, kEval, opts2) + matOffSet(1:nB(2), 1:nB(2));
 K11 = K11 - eye(size(K11));
 Kc(1:nB(2), 1:nB(2)) = K11;
 % Build the first row and column of the Kc matrix
 for i=2:nChunkers
     targ = reshape( ds.listCoarseGammas(i-1).r, 2, []);
-    rowBlock = chunkerkernevalmat( ds.gamma0, kernel, targ, opts  );
+    rowBlock = chunkerkernevalmat( ds.gamma0, kEval, targ, opts  );
     Kc(  (nBc(i)+1):nBc(i+1), 1:nB(2)  ) = rowBlock + matOffSetCoarse(  (nBc(i)+1):nBc(i+1), 1:nB(2)  );
     targGamma0 = reshape( ds.gamma0.r, 2, [] );
-    columnBlock = chunkerkernevalmat( ds.listCoarseGammas(i-1), kernel, targGamma0, opts );
+    columnBlock = chunkerkernevalmat( ds.listCoarseGammas(i-1), kEval, targGamma0, opts );
     Kc( 1:nB(2), (nBc(i)+1):nBc(i+1) ) = columnBlock + matOffSetCoarse( 1:nB(2), (nBc(i)+1):nBc(i+1) );
 end
 
@@ -124,7 +137,7 @@ for k=1:nGammas
         if(i ~= k)
             % off boundary, else its just zeros and we don't need to
             % compute anything
-            Keval = chunkerkernevalmat(chnkri, kernel, targ, opts);
+            Keval = chunkerkernevalmat(chnkri, kEval, targ, opts);
             Kc(start_col:end_col, start_row:end_row) = Keval + matOffSetCoarse(start_col:end_col, start_row:end_row);
         end
     end
@@ -145,9 +158,10 @@ t2 = toc(s);
 % colormap(cmap_bpp)
 
 [m,n] = size(Kc);
+if(verbose)
 fprintf("\n\n\nNEW GMRES SOLVE BLOCK PRECOND INTERPOLATION \n\n     %5.2e  time solve  \n     " + ...
     "%d x %d matrix dimensions\n     %5.2e condition number\n\n\n", t2, m, n, cond(Kc));
-
+end
 nGMRES = nGMRES(2);
 
 % Get sigma in the fine discretization
