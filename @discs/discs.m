@@ -77,11 +77,39 @@ classdef discs
                 geom.Rs = 1;
                 geom.nBreakPoints = 10;
             end
+            ctrs = geom.ctrs;
+            nDiscs = size(ctrs, 2);
+
+            Rs = 0.75*ones(1, nDiscs); % all discs with same radii = 0.75 (NEVER USE 1)
+            if isfield(geom, 'Rs') 
+                Rs = geom.Rs;
+                if( length(Rs) < nDiscs )
+                    Rs = Rs*ones(1, nDiscs);
+                end
+            end
+            geom.Rs = Rs;
+
+            nBreakPoints = 10*ones(1, nDiscs);
+            if isfield(geom, 'nBreakPoints')
+                nBreakPoints = geom.nBreakPoints;
+                if( size(geom.nBreakPoints, 2) < nDiscs)
+                    nBreakPoints = geom.nBreakPoints(1)*ones(1, nDiscs);
+                end
+            end
+
+            % Settings for the geometry of the discs
+            obj.nDiscs = nDiscs;
+            obj.geom = geom;
+            obj.nDiscs = nDiscs;
+            obj.ctrs = ctrs;
+            obj.Rs = Rs;
+            obj.nBreakPoints = nBreakPoints;
+
             if( nargin < 2)
                 % Meaning that we dont have information about points close
                 % to other discs, pClose is a structured array
-                pClose = [];
-                infoClose = false;
+                pClose = findpClose(obj);
+                infoClose = true;
             else
                 % See if we have the correct amount of discs 
                 if( length(pClose) ~= size(geom.ctrs, 2) )
@@ -95,31 +123,9 @@ classdef discs
                 p = chunkerpref();
             else
                 p = chunkerpref(p);
-            end
+            end 
 
-            % Settings for the geometry of the discs
-            ctrs = geom.ctrs;
-            nDiscs = size(ctrs, 2);
-            obj.nDiscs = nDiscs;
-            Rs = 0.75*ones(1, nDiscs); % all discs with same radii = 0.75 (NEVER USE 1)
-            nBreakPoints = 10*ones(1, nDiscs);
-
-            if isfield(geom, 'Rs') 
-                Rs = geom.Rs;
-                if( length(Rs) < nDiscs )
-                    Rs = Rs*ones(1, nDiscs);
-                end
-            end
-            if isfield(geom, 'nBreakPoints')
-                nBreakPoints = geom.nBreakPoints;
-                if( size(geom.nBreakPoints, 2) < nDiscs)
-                    nBreakPoints = geom.nBreakPoints(1)*ones(1, nDiscs);
-                end
-            end
-
-            obj.geom = geom;
             obj.pClose = pClose;
-            obj.nDiscs = nDiscs;
 
             listGammas = [];
             listCoarseGammas = [];
@@ -165,6 +171,14 @@ classdef discs
                 [I, nGammas, pClose] = buildI(obj);
                 obj.I = I;
                 obj.pClose = pClose; % Update
+
+                if(isempty(I))
+                    infoClose = false;
+                end
+
+            end
+
+            if(infoClose)
 
                 % Build list for gammas, close to touching interactiong and
                 % the map for the neighbors
@@ -216,9 +230,6 @@ classdef discs
             end
 
             % Add these properties to the object
-            obj.ctrs = ctrs;
-            obj.Rs = Rs;
-            obj.nBreakPoints = nBreakPoints;
             obj.infoClose = infoClose;
             obj.chnkrsGammas = chnkrsGammas;
             obj.chnkrs = chnkrs;

@@ -25,7 +25,6 @@ function [gamma0, neisMapFar, listFarChunks] = buildGamma0(arg1, pClose, I, nDis
 %
 % author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
-
 % Determine if arg1 is a discs object or if its geom
 if(isa(arg1, 'discs') && nargin<2)
     geom = arg1.geom;
@@ -34,6 +33,14 @@ if(isa(arg1, 'discs') && nargin<2)
     nDiscs = arg1.nDiscs;
 else
     geom = arg1;
+end
+
+% Determine if we actually need to do this
+if(isempty(I))
+    gamma0 = 0;
+    neisMapFar = 0;
+    listFarChunks = 0;
+    return 
 end
 
 % Chunker preferences

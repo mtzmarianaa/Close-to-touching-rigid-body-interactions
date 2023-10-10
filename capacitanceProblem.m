@@ -1,4 +1,4 @@
-function [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, plt, outopt)
+function [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, typeNodes, plt, outopt)
 % *capacitanceProblem* solves the capacitance problem on non overlapping
 % identical discs. Depending on the arguments it solves the problem with a
 % different approach.
@@ -9,12 +9,14 @@ function [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem
 %              [q, sigma, nGMRES] = capacitanceProblem(ds, uk, solveType, outopt)
 %              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk)
 %              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType)
-%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType, plt)
-%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType, outopt)
+%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType, typeNodes)
+%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType, typeNodes, plt)
+%              [q, sigma, nGMRES, tSolve] = capacitanceProblem(ds, uk, solveType, typeNodes, outopt)
 %              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk)
 %              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType)
-%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, plt)
-%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, outopt)
+%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, typeNodes)
+%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, typeNodes, plt)
+%              [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem(ds, uk, solveType, typeNodes, outopt)
 %
 % Input:
 %   ds - discs object, has all the geometric properties of the collection
@@ -30,6 +32,7 @@ function [q, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = capacitanceProblem
 %                                'interprecondcomp'solves the
 %                                preconditioned compressed system using
 %                                interpolation
+%   typeNodes - 'l' for Legendre nodes, 'logc' for log Chebyshev
 %   plt - boolean if the method should render plots or not
 %   outopt - output options for plotting
 %
@@ -51,10 +54,16 @@ if(nargin < 3)
 end
 solveType = lower(solveType);
 
-if( nargin < 4 )
+if(nargin < 4)
+    typeNodes = 'logc';
+end
+
+typeNodes = lower(typeNodes);
+
+if( nargin < 5 )
     plt = false;
 end
-if( nargin < 5 )
+if( nargin < 6 )
     outopt = [];
     outopt.fact = 1.5;
     outopt.nplot = 750;
@@ -78,7 +87,7 @@ end
 n = length(uk);
 ctrs = ds.ctrs;
 
-kern = kernel('lap', 'c');
+kern = kernel('lap', 'c', [1.0, 1.0]);
 matOffSet = 0.5*eye(ds.chnkrs.npt);
 
 % Build according to preferences
@@ -98,14 +107,17 @@ end
 
 % See if we have the correct files for the interpolation
 if strcmp(solveType, 'interprecondcomp')
-    if isfile('../+prc/listPrecomputedR_Capacitance.mat')
-        load('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
+    filePrecomputedR = strcat('../+prc/listPrecomputedR_Capacitance', typeNodes ,'.mat');
+    if isfile(filePrecomputedR)
+        load(filePrecomputedR, 'listPrecomputedR_Capacitance');
     else
         % We dont have mat interpolant and we dont have the list of
         % precomputed Rs
+        fileListK22Inv = strcat('../+prc/listK22_invCapacitance.mat', typeNodes ,'.mat');
         geom0 = [];
         geom0.Rs = [0.75; 0.75];
         geom0.ctrs = [0  1.6; 0 0];
+        geom0.nBreakPoints = [10; 10];
         pClose0 = [];
         pClose0(1).data = [0 2 1];
         pClose0(1).nClose = 1;
@@ -115,17 +127,17 @@ if strcmp(solveType, 'interprecondcomp')
         pClose0(2).thetasReg = pi/6;
         pClose0(1).nBreakPoints = [10;10];
         pClose0(2).nBreakPoints = [10;10];
-        if isfile('../+prc/listK22_invCapacitance.mat')
-            load('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance');
+        if isfile(fileListK22Inv)
+            load(fileListK22Inv, 'listK22_invCapacitance');
             listPrecomputedR_Capacitance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                pClose0, listK22_invCapacitance);
-            save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance.mat');
+                pClose0, listK22_invCapacitance, typeNodes);
+            save(filePrecomputedR, 'listPrecomputedR_Capacitance');
         else
-            listK22_invCapacitance = dsc.capc.listK22_invCapacitance(geom0, pClose0);
-            save('../+prc/listK22_invCapacitance.mat', 'listK22_invCapacitance.mat');
+            listK22_invCapacitance = dsc.capc.listK22_invCapacitance(geom0, pClose0, typeNodes);
+            save(fileListK22Inv, 'listK22_invCapacitance');
             listPrecomputedR_Capacitance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                pClose0, listK22_invCapacitance);
-            save('../+prc/listPrecomputedR_Capacitance.mat', 'listPrecomputedR_Capacitance');
+                pClose0, listK22_invCapacitance, typeNodes);
+            save(filePrecomputedR, 'listPrecomputedR_Capacitance');
         end
     end
 end
@@ -251,7 +263,7 @@ if( nargout > 4 )
     end
     
     % Evaluate points off surface
-    DLplusSL = kernel('lap', 'c');
+    DLplusSL = kernel('lap', 'c', [1.0, 1.0]);
     s = tic;
     %Dsol_capacitance = DLplusSL.fmm(1e-12, ds.chnkrs, targets(:,~in), sigma);
     Dsol_capacitance = chunkerkerneval(ds.chnkrs , DLplusSL,  sigma , targets(:,~in)); 

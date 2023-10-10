@@ -38,6 +38,15 @@ else
     geom = arg1;
 end
 
+% See if we actually need to do this
+if( isempty(I) )
+    listGammas = 0;
+    neisMapClose = 0;
+    I_closeReg = 0;
+    listCoarseGammas = 0;
+    return
+end
+
 % Chunker preferences
 pref = chunkerpref();
 cparams = [];

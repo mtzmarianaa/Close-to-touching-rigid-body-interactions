@@ -1,20 +1,23 @@
-function [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, plt, outopt)
+function [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, typeNodes, plt, outopt)
 % *elastanceProblem* solves the elastance problem on non overlapping
 % identical discs. Depending on the arguments it solves the problem with a
 % different approach.
 %
 % Syntax: [uk, sigma, nGMRES] = elastanceProblem(ds, qk)
 %              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType)
-%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType, plt)
-%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType, outopt)
+%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType, typeNodes)
+%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType, typeNodes, plt)
+%              [uk, sigma, nGMRES] = elastanceProblem(ds, qk, solveType, typeNodes, outopt)
 %              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk)
 %              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType)
-%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType, plt)
-%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType, outopt)
+%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType, typeNodes)
+%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType, typeNodes, plt)
+%              [uk, sigma, nGMRES, tSolve] = elastanceProblem(ds, qk, solveType, typeNodes, outopt)
 %              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk)
 %              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType)
-%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, plt)
-%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, outopt)
+%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, typeNodes)
+%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, typeNodes, plt)
+%              [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(ds, qk, solveType, typeNodes, outopt)
 %
 % Input:
 %   ds - discs object, has all the geometric properties of the collection
@@ -30,6 +33,7 @@ function [uk, sigma, nGMRES, tSolve, zztarg, xxtarg, yytarg] = elastanceProblem(
 %                                'interprecondcomp'solves the
 %                                preconditioned compressed system using
 %                                interpolation
+%   typeNodes - 'l' for Legendre nodes, 'logc' for log Chebyshev
 %   plt - boolean if the method should render plots or not
 %   outopt - output options for plotting
 %
@@ -51,10 +55,16 @@ if(nargin < 3)
 end
 solveType = lower(solveType);
 
-if( nargin < 4 )
+if(nargin < 4)
+    typeNodes = 'logc';
+end
+typeNodes = lower(typeNodes);
+
+if( nargin < 5 )
     plt = false;
 end
-if( nargin < 5 )
+
+if( nargin < 6 )
     outopt = [];
     outopt.fact = 1.5;
     outopt.nplot = 750;
@@ -106,14 +116,17 @@ end
 
 % See if we have the correct files for the interpolation
 if strcmp(solveType, 'interprecondcomp')
-    if isfile('../+prc/listPrecomputedR_Elastance.mat')
-        load('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
+    filePrecomputedR = strcat('../+prc/listPrecomputedR_Elastance', typeNodes ,'.mat');
+    if isfile(filePrecomputedR)
+        load(filePrecomputedR, 'listPrecomputedR_Elastance');
     else
         % We dont have mat interpolant and we dont have the list of
         % precomputed Rs
+        fileListK22Inv = strcat('../+prc/listK22_invElastance.mat', typeNodes ,'.mat');
         geom0 = [];
         geom0.Rs = [0.75; 0.75];
         geom0.ctrs = [0  1.6; 0 0];
+        geom0.nBreakPoints = [10; 10];
         pClose0 = [];
         pClose0(1).data = [0 2 1];
         pClose0(1).nClose = 1;
@@ -123,22 +136,20 @@ if strcmp(solveType, 'interprecondcomp')
         pClose0(2).thetasReg = pi/6;
         pClose0(1).nBreakPoints = [10;10];
         pClose0(2).nBreakPoints = [10;10];
-        if isfile('../+prc/listK22_invElastance.mat')
-            load('../+prc/listK22_invElastance.mat', 'listK22_invElastance');
+        if isfile(fileListK22Inv)
+            load(fileListK22Inv, 'listK22_invElastance');
             listPrecomputedR_Elastance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                pClose0, listK22_invElastance);
-            save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance.mat');
+                pClose0, listK22_invElastance, typeNodes);
+            save(filePrecomputedR, 'listPrecomputedR_Elastance');
         else
-            listK22_invElastance = dsc.elst.listK22_invElastance(geom0, pClose0);
-            save('../+prc/listK22_invElastance.mat', 'listK22_invElastance.mat');
+            listK22_invElastance = dsc.elst.listK22_invElastance(geom0, pClose0, typeNodes);
+            save(fileListK22Inv, 'listK22_invElastance');
             listPrecomputedR_Elastance = rcip.buildPrecomputedR_twoDiscs(geom0,  ...
-                pClose0, listK22_invElastance);
-            save('../+prc/listPrecomputedR_Elastance.mat', 'listPrecomputedR_Elastance');
+                pClose0, listK22_invElastance, typeNodes);
+            save(filePrecomputedR, 'listPrecomputedR_Elastance');
         end
     end
 end
-
-
 
 % Solve according to preferences
 
