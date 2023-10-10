@@ -11,3 +11,4 @@ GTAGS
 *.pyc
 *.DS_Store
 *.asv
+*.mat
