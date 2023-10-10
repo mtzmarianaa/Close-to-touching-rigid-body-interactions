@@ -1,14 +1,14 @@
-function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0, verbose)
+function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, typeNodes, matOffSet, matOffSetCoarse, geom0, verbose)
 % *solveInterpPrecond* solve the BIE for K*sigma = rhs. Solves the compressed,
 % preconditioned system using interpolation from precomputed matrices. 
 % Solves the linear system with GMRES. Also outputs number of GMRES 
 % iterations needed to solve the problem. 
 % Could output time taken to assemble and solve the problem.
 %
-% Syntax: [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR)
-%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse)
-%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0)
-%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, matOffSet, matOffSetCoarse, geom0, verbose)
+% Syntax: [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, typeNodes)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, typeNodes, matOffSet, matOffSetCoarse)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, typeNodes, matOffSet, matOffSetCoarse, geom0)
+%              [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, kernel, listPrecomputedR, typeNodes, matOffSet, matOffSetCoarse, geom0, verbose)
 %
 % Input:
 %   ds - discs object, has all the geometric properties of the collection
@@ -18,6 +18,7 @@ function [sigmaInterpPrecond, nGMRES, tSolve] = solveInterpPrecond(ds, rhsC, ker
 %   kernel - kernel object (from chunkie) or function handle definind the
 %                kernel to use
 %   listPrecomputedR - list of precomputed R matrices (has to be given)
+%   typeNodes - 'l' for Legendre nodes, 'logc' for log Chebyshev
 %
 % Optional input:
 %   matOffSet - matrix defining the integral operator in the fine mesh which is not a kernel
@@ -47,19 +48,19 @@ end
 
 
 % Determine if matrix is given, if not initialize it with zeros
-if( nargin < 6 || length(matOffSet(:)) ==1 || length(matOffSetCoarse(:)) == 1) 
+if( nargin < 7 || length(matOffSet(:)) ==1 || length(matOffSetCoarse(:)) == 1) 
     matOffSet = sparse(ds.chnkrs.npt, ds.chnkrs.npt);
     matOffSetCoarse = sparse( ds.nBCoarse(end), ds.nBCoarse(end) );
 end
 
 % Determine if initial geometry is given, otherwise just use what we have
-if( nargin < 7 || ~isstruct(geom0) )
+if( nargin < 8 || ~isstruct(geom0) )
     geom0 = [];
     geom0.Rs = [0.75; 0.75];
     geom0.ctrs = [0  1.6; 0 0];
 end
 
-if(nargin < 8)
+if(nargin < 9)
     verbose = true;
 end
 
@@ -78,17 +79,22 @@ nB = ds.nB;
 s = tic();
 % Interpolation part
 d = norm( ds.ctrs(:, 2) - ds.ctrs(:, 1)) - ds.Rs(1) - ds.Rs(2);
-kCh = floor( log( (norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2))/d  )*(1/log(2)) );
-kCh = max(0, kCh);
-%   corresponding coefficients
 
-da = 1/(2^kCh)*(norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2) );
-db = 1/(2^(kCh + 1))*(norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2) );
+if strcmp(typeNodes, 'l')
+    kCh = floor( log( (norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2))/d  )*(1/log(2)) );
+    kCh = max(0, kCh);
+    %   corresponding coefficients
+    da = 1/(2^kCh)*(norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2) );
+    db = 1/(2^(kCh + 1))*(norm(geom0.ctrs(:, 1) - geom0.ctrs(:, 2)) - geom0.Rs(1) - geom0.Rs(2) );
+    xDist = 2*(d - da)/(db - da) - 1;
+else
+    xDist = -1 + 2*(d - 0.1)/(1e-12 - 0.1);
+    kCh = 0;
+end
 
-xDist = 2*(d - da)/(db - da) - 1;
 
 % Evaluate the interpolated R
-R_interpolated = rcip.evaluateRInterpolated(xDist, listPrecomputedR{kCh+1});
+R_interpolated = rcip.evaluateRInterpolated(xDist, listPrecomputedR{kCh+1}, typeNodes);
 
 % Build the system
 nRef = floor(ds.listGammas(1).nch/4 - 2);

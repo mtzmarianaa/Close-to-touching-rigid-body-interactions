@@ -160,7 +160,7 @@ elseif strcmp(solveType, 'precond')
 elseif strcmp(solveType, 'precondcomp')
     [sigma, nGMRES, tS] = dsc.solvePrecondComp(ds, rhs, kern, matOffSet, matOffSetCoarse, 0, 0, 0, verbose);
 elseif strcmp(solveType, 'interprecondcomp')
-    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Elastance, matOffSet, matOffSetCoarse, 0, verbose);
+    [sigma, nGMRES, tS] = dsc.solveInterpPrecond(ds, rhs, kern, listPrecomputedR_Elastance, typeNodes, matOffSet, matOffSetCoarse, 0, verbose);
 end
 
 

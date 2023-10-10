@@ -35,7 +35,7 @@ if(nargin<5)
 end
 
 if(isequal(typeNodes, 'logc'))
-    kDist = 32;
+    kDist = 16;
     nRefDist = 1;
 end
 
@@ -97,11 +97,13 @@ else
     % Fill the cell array for log chebychev nodes
     geom.ctrs(:, 1) = geom0.ctrs(:, 1);
     for j=1:kDist
+        j
         geom.ctrs(1, 2) = xDist(j); % New center for second disc
         ds = discs(geom, pClose0);
         matOffSet = 0.5*eye(ds.listGammas(1).npt);
         K22 = chunkermat(ds.listGammas(1), kern, opts2) + matOffSet;
-        listK22_inv{j} = inv(K22);
+        K22_inv = inv(K22);
+        listK22_inv{j} = K22_inv;
     end
 end
 

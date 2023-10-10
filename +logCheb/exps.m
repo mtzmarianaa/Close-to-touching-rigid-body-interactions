@@ -32,7 +32,7 @@ x = log(x);
 x = a + (b-a)*(x - x(1))/(x(end) - x(1));
 
 if(nargout>1)
-    w = baryWeights(x); % Barycentric weights from chebfun
+    w = logCheb.barywts(x); % Barycentric weights from chebfun
 end
 
 

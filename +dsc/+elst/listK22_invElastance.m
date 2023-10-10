@@ -35,7 +35,7 @@ if(nargin<5)
 end
 
 if(isequal(typeNodes, 'logc'))
-    kDist = 32;
+    kDist = 16;
     nRefDist = 1;
 end
 

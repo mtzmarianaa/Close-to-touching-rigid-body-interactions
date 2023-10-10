@@ -35,8 +35,8 @@ if(nargin<5)
 end
 
 if(isequal(typeNodes, 'logc'))
-    kDist = 32;
-    nRefDist = 32;
+    kDist = 16;
+    nRefDist = 1;
 end
 
 ds = discs(geom0, pClose0);
@@ -79,7 +79,6 @@ if(isequal(typeNodes, 'l'))
         b = cHat2(2, i+1);
         cInter(2, :) = a + (b-a)*(xDist + 1)/2;
         for j=1:kDist
-            j
             K22_inv = listK22_inv{(i-1)*kDist + j};
             % Compute R for each of these nodes
             geom.ctrs(:, 1) = geom0.ctrs(:, 1);
@@ -102,8 +101,9 @@ else
         nRef = floor(ds.listGammas(1).nch/4 - 2);
         P = rcip.prol_dyadic(ds.listCoarseGammas(1).k, nRef);
         P = blkdiag(P, P);
-        listPrecomputedR{j} = rcip.buildR(ds.listCoarseGammas(1), ds.listGammas(1), K22_inv, P);
+        cellItem(:, :, j) = rcip.buildR(ds.listCoarseGammas(1), ds.listGammas(1), K22_inv, P);
     end
+    listPrecomputedR{1} = cellItem; % Just to keep consistency with data structures
 end
 
 end

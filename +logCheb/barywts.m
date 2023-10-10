@@ -1,34 +1,24 @@
-function w = barywts(q, a, b)
-% *barywts* returns scaled barycentric weights for the logChebyshev points
+function w = barywts(x)
+% *barywts* returns scaled barycentric weights for points x (NOT WEIGHTED)
 % Makes use of chebfun! q can be either the number of points or the points
-% themselves. Makes use of *CHEBFUN*!
+% themselves. Similar to *CHEBFUN*!
 %
-% Syntax: w = logCheb.barywts(q)
-%              w = logCheb.barywts(q, a, b)
+% Syntax: w = logCheb.barywts(x)
 % Input:
-%   q - either number of nodes or nodes themselves
-%
-% Optional input:
-%   a - start of the interval if q is number of nodes (auto -1)
-%   b - end of interval if q is number of nodes (auto 1)
+%   x - nodes
 %
 % Output:
 %   w - Barycentric weights
 %
 % author: Mariana Martinez (mariana.martinez.aguilar@gmail.com)
 
-if(nargin < 2)
-    a = -1;
-    b = 1;
-end
+k = length(x);
 
-if length(q) == 1
-    % Means that we just have k, the number of points
-    [~, w] = logCheb.exps(q, a, b);
-else
-    % q is a vector
-    w = baryWeights(q);
-end
+xx = bsxfun(@minus,x,x.');
+xx(1:k+1:end) = 1;
+
+w = prod(xx,1);
+w = w(1)./w(:);
 
 
 end
